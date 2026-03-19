@@ -1,0 +1,58 @@
+# ========================
+# SYSTEM FILES
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# ENV
+# ========================
+.env
+.env.*
+!.env.example
+
+# ========================
+# LOGS
+# ========================
+*.log
+
+# ========================
+# IDE / EDITOR
+# ========================
+.idea
+.vscode
+.fleet
+.zed
+
+# ========================
+# LARAVEL CORE
+# ========================
+/vendor
+/node_modules
+
+/public/build
+/public/hot
+/public/storage
+
+/storage/*.key
+/storage/logs/*
+/storage/framework/*
+/bootstrap/cache/*
+
+# ========================
+# CACHE / TEST
+# ========================
+.phpunit.result.cache
+.phpunit.cache
+
+# ========================
+# CONFIG / LOCAL
+# ========================
+.phpactor.json
+auth.json
+
+# ========================
+# HOMESTEAD
+# ========================
+Homestead.json
+Homestead.yaml
