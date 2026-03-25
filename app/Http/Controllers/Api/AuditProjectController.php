@@ -25,7 +25,11 @@ class AuditProjectController extends Controller
     // ===============================
     public function show($id)
 {
-    $project = AuditProject::with('company')->findOrFail($id);
+    $project = \App\Models\AuditProject::with([
+        'company',
+        'findings.findingDepartments.department',
+        'findings.findingDepartments.actionPlans'
+    ])->findOrFail($id);
 
     $findingsCollection = Finding::where('audit_project_id', $id)
         ->with([
