@@ -37,6 +37,7 @@ Route::put('/findings/{id}', [FindingController::class,'update']);
 Route::delete('/findings/{id}', [FindingController::class,'destroy']);
 Route::post('/findings/add-department', [FindingController::class, 'addDepartment']);
 
+
 Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/dashboard-summary',[DashboardController::class,'summary']);
 Route::get('/findings-by-risk',[DashboardController::class,'findingsByRisk']);
@@ -50,3 +51,5 @@ Route::post('/evidences', [EvidenceController::class, 'store']);
 Route::post('/verifications', [VerificationController::class, 'store']);
 
 Route::post('/finding-departments', [FindingDepartmentController::class, 'store']);
+Route::put('/finding-departments/{id}', [FindingDepartmentController::class, 'updateStatus']);
+Route::delete('/finding-departments/{id}', [FindingDepartmentController::class, 'destroy']);

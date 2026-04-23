@@ -15,7 +15,7 @@ class ActionPlanController extends Controller
         'root_cause' => 'nullable|string',
         'corrective_action' => 'required|string',
         'target_date' => 'nullable|date',
-        'status' => 'required|in:open,need_review,completed',
+        'status' => 'required|in:draft,submitted,approved,in_progress,done,verified'
     ]);
 
     $actionPlan = ActionPlan::create($validated);
@@ -39,7 +39,7 @@ public function bulkStore(Request $request)
                 'root_cause' => $plan['root_cause'] ?? null,
                 'corrective_action' => $plan['corrective_action'] ?? null,
                 'target_date' => $plan['target_date'] ?? null,
-                'status' => 'open'
+                'status' => 'draft'
             ]);
         }
 

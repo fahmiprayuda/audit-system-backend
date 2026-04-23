@@ -31,12 +31,7 @@ class AuditProjectController extends Controller
         'findings.findingDepartments.actionPlans'
     ])->findOrFail($id);
 
-    $findingsCollection = Finding::where('audit_project_id', $id)
-        ->with([
-            'findingDepartments.department',
-            'findingDepartments.actionPlans'
-        ])
-        ->get();
+    $findingsCollection = $project->findings;
 
     // ===============================
     // SUMMARY
@@ -45,9 +40,10 @@ class AuditProjectController extends Controller
         "total" => $findingsCollection->count(),
         "significant" => $findingsCollection->where('risk_category', 'Significant')->count(),
         "moderate" => $findingsCollection->where('risk_category', 'Moderate')->count(),
-        "open" => $findingsCollection->where('status', 'open')->count(),
-        "need_review" => $findingsCollection->where('status', 'need_review')->count(),
-        "closed" => $findingsCollection->where('status', 'closed')->count(),
+        "open" => $findingsCollection->filter(fn($f) => $f->status === 'open')->count(),
+        "in_progress" => $findingsCollection->filter(fn($f) => $f->status === 'in_progress')->count(),
+        "pending_verify" => $findingsCollection->filter(fn($f) => $f->status === 'pending_verify')->count(),
+        "closed" => $findingsCollection->filter(fn($f) => $f->status === 'closed')->count(),
     ];
 
     // ===============================
@@ -69,6 +65,7 @@ class AuditProjectController extends Controller
                     'finding_department_id' => $fd->id,
                     'department_id' => $fd->department->id,
                     'name' => $fd->department->name,
+                    'status' => $fd->status, // 🔥 INI YANG PENTING
 
                     'action_plans' => $fd->actionPlans->map(function ($ap) {
                         return [
@@ -86,7 +83,10 @@ class AuditProjectController extends Controller
     // FINAL RESPONSE 🔥
     // ===============================
     return response()->json([
-        "project" => $project,
+        "project" => [
+            ...$project->toArray(),
+            'status' => $project->status
+        ],
         "summary" => $summary,
         "findings" => $findings
     ]);
@@ -98,8 +98,15 @@ class AuditProjectController extends Controller
     public function findings($id)
     {
         return Finding::where('audit_project_id', $id)
-            ->with('findingDepartments.department')
-            ->get();
+        ->with('findingDepartments.department', 'findingDepartments.actionPlans')
+        ->get()
+        ->map(function ($f) {
+            return [
+                'id' => $f->id,
+                'title' => $f->title,
+                'status' => $f->status
+            ];
+        });
     }
 
     // ===============================
@@ -152,7 +159,6 @@ class AuditProjectController extends Controller
             'audit_type'   => $request->audit_type,
             'start_date'   => $request->start_date,
             'end_date'     => $request->end_date,
-            'status'       => 'open',
             'created_by'   => auth()->id() ?? 1
         ]);
 

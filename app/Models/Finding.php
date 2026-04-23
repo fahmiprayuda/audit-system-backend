@@ -14,9 +14,31 @@ class Finding extends Model
     'risk_rating',
     'risk_category',
     'due_date',
-    'status',
     'created_by'
     ];
+
+    protected $appends = ['status'];
+
+    public function getStatusAttribute()
+    {
+        $departments = $this->findingDepartments;
+
+        if ($departments->isEmpty()) return 'open';
+
+        if ($departments->every(fn($d) => $d->status === 'closed')) {
+            return 'closed';
+        }
+
+        if ($departments->contains(fn($d) => $d->status === 'in_progress')) {
+            return 'in_progress';
+        }
+
+        if ($departments->contains(fn($d) => $d->status === 'pending_verify')) {
+            return 'pending_verify';
+        }
+
+        return 'open';
+    }
 
     public function project()
     {

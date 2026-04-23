@@ -39,18 +39,24 @@ public function index(Request $request)
         });
     }
 
-    // FILTERS
+    // FILTER RISK
     if ($request->risk_rating) {
         $query->where('risk_rating', $request->risk_rating);
     }
 
+    // // 🔥 FILTER STATUS (PINDAH KE FD)
     if ($request->status) {
-        $query->where('status', $request->status);
+        $query->whereHas('findingDepartments', function ($q) use ($request) {
+            $q->where('status', $request->status);
+        });
     }
 
+    // FILTER DEPARTMENT
     if ($request->department_id) {
-        $query->whereHas('findingDepartments', function ($q) use ($request) {
-            $q->where('department_id', $request->department_id);
+        $ids = explode(',', $request->department_id);
+
+        $query->whereHas('findingDepartments', function ($q) use ($ids) {
+            $q->whereIn('department_id', $ids);
         });
     }
 
@@ -59,21 +65,23 @@ public function index(Request $request)
     // TRANSFORM
     $findings->getCollection()->transform(function ($f) {
 
+        $f->description = $f->description ?? '';
+
+        // 🔥 OVERDUE BASED ON FD (optional nanti bisa per dept)
         $f->is_overdue = false;
 
-        if ($f->due_date && $f->status !== 'closed') {
+        if ($f->due_date) {
             if (Carbon::parse($f->due_date)->isPast()) {
                 $f->is_overdue = true;
             }
         }
 
-        $f->description = $f->description ?? '';
-
         $f->departments = $f->findingDepartments->map(function ($fd) {
-            return [
-                'finding_department_id' => $fd->id,
-                'department_id' => $fd->department->id,
-                'department_name' => $fd->department->name,
+        return [
+                'id' => $fd->department->id,
+                'name' => $fd->department->name,
+                'status' => $fd->status,
+
                 'action_plans' => $fd->actionPlans->map(function ($ap) {
                     return [
                         'id' => $ap->id,
@@ -111,14 +119,17 @@ public function show($id)
         'title' => $finding->title,
         'description' => $finding->description ?? '',
         'risk_rating' => $finding->risk_rating,
-        'status' => $finding->status,
         'due_date' => $finding->due_date,
+
+        // 🔥 OPTIONAL: summary status
+        'status' => $finding->status,
 
         'departments' => $finding->findingDepartments->map(function ($fd) {
             return [
                 'finding_department_id' => $fd->id,
                 'department_id' => $fd->department->id,
-                'department_name' => $fd->department->name,
+                'name' => $fd->department->name, // ✅ INI WAJIB
+                'status' => $fd->status,
 
                 'action_plans' => $fd->actionPlans->map(function ($ap) {
                     return [
@@ -127,17 +138,6 @@ public function show($id)
                         'corrective_action' => $ap->corrective_action ?? '',
                         'status' => $ap->status,
                         'target_date' => $ap->target_date,
-
-                        'evidences' => $ap->evidences->map(fn($e) => [
-                            'id' => $e->id,
-                            'file_path' => $e->file_path
-                        ]),
-
-                        'verifications' => $ap->verifications->map(fn($v) => [
-                            'id' => $v->id,
-                            'status' => $v->status,
-                            'note' => $v->note ?? ''
-                        ])
                     ];
                 })
             ];
@@ -158,14 +158,25 @@ public function store(Request $request)
         'description' => 'nullable|string',
         'risk_rating' => 'required|string',
         'due_date' => 'nullable|date',
-        'departments' => 'required|array',
-        'departments.*' => 'exists:departments,id'
+
+        // 🔥 departments wajib
+        'departments' => 'required|array|min:1',
+        'departments.*' => 'exists:departments,id',
+
+        // 🔥 action plans wajib
+        'action_plans' => 'required|array|min:1',
+        'action_plans.*.department_id' => 'required|exists:departments,id',
+        'action_plans.*.corrective_action' => 'required|string',
+        'action_plans.*.target_date' => 'nullable|date',
     ]);
 
     DB::beginTransaction();
 
     try {
 
+        // ===============================
+        // GENERATE FINDING CODE
+        // ===============================
         $project = AuditProject::with('company')->findOrFail($request->audit_project_id);
 
         $companyCode = $project->company->code;
@@ -178,6 +189,9 @@ public function store(Request $request)
         $sequence = str_pad($count, 3, '0', STR_PAD_LEFT);
         $findingCode = "FND-{$companyCode}-{$year}-{$sequence}";
 
+        // ===============================
+        // CREATE FINDING
+        // ===============================
         $finding = Finding::create([
             'audit_project_id' => $request->audit_project_id,
             'finding_code' => $findingCode,
@@ -187,21 +201,44 @@ public function store(Request $request)
             'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
                 ? 'Significant' : 'Moderate',
             'due_date' => $request->due_date,
-            'status' => 'open',
             'created_by' => auth()->id() ?? 1
         ]);
 
+        // ===============================
+        // CREATE FD + ACTION PLAN
+        // ===============================
         foreach ($request->departments as $deptId) {
-            FindingDepartment::create([
+
+            // buat FD
+            $fd = FindingDepartment::create([
                 'finding_id' => $finding->id,
-                'department_id' => $deptId
+                'department_id' => $deptId,
             ]);
+
+            // cari AP yang sesuai department
+            $relatedPlans = collect($request->action_plans)
+                ->where('department_id', $deptId);
+
+            if ($relatedPlans->isEmpty()) {
+                throw new \Exception("Department wajib punya action plan");
+            }
+
+            foreach ($relatedPlans as $ap) {
+
+                \App\Models\ActionPlan::create([
+                    'finding_department_id' => $fd->id,
+                    'root_cause' => $ap['root_cause'] ?? '',
+                    'corrective_action' => $ap['corrective_action'],
+                    'target_date' => $ap['target_date'] ?? null,
+                    'status' => 'draft'
+                ]);
+            }
         }
 
         DB::commit();
 
         return response()->json([
-            'message' => 'Finding created successfully',
+            'message' => 'Finding + Action Plans created successfully',
             'data' => $finding
         ]);
 
@@ -218,7 +255,7 @@ public function store(Request $request)
 
 
 /* =====================================================
-UPDATE
+UPDATE FINDING (GLOBAL DATA ONLY)
 ===================================================== */
 
 public function update(Request $request, $id)
@@ -227,8 +264,7 @@ public function update(Request $request, $id)
         'title' => 'sometimes|string',
         'description' => 'nullable|string',
         'risk_rating' => 'sometimes|string',
-        'due_date' => 'nullable|date',
-        'status' => 'sometimes|in:open,need_review,completed,closed'
+        'due_date' => 'nullable|date'
     ]);
 
     $finding = Finding::findOrFail($id);
@@ -241,8 +277,7 @@ public function update(Request $request, $id)
         'risk_rating' => $riskRating,
         'risk_category' => in_array($riskRating, ['Extreme', 'Major'])
             ? 'Significant' : 'Moderate',
-        'due_date' => $request->due_date ?? $finding->due_date,
-        'status' => $request->status ?? $finding->status
+        'due_date' => $request->due_date ?? $finding->due_date
     ]);
 
     return response()->json([
