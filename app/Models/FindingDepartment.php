@@ -9,30 +9,9 @@ class FindingDepartment extends Model
     protected $fillable = [
         'finding_id',
         'department_id',
+        'status'
     ];
 
-    protected $appends = ['status'];
-
-    public function getStatusAttribute()
-    {
-        $actions = $this->actionPlans;
-
-        if ($actions->isEmpty()) return 'open';
-
-        if ($actions->contains(fn($a) => $a->status === 'in_progress')) {
-            return 'in_progress';
-        }
-
-        if ($actions->every(fn($a) => $a->status === 'verified')) {
-            return 'closed';
-        }
-
-        if ($actions->every(fn($a) => in_array($a->status, ['done', 'verified']))) {
-            return 'pending_verify';
-        }
-
-        return 'open';
-    }
 
     public function finding()
     {

@@ -83,10 +83,7 @@ class AuditProjectController extends Controller
     // FINAL RESPONSE 🔥
     // ===============================
     return response()->json([
-        "project" => [
-            ...$project->toArray(),
-            'status' => $project->status
-        ],
+        "project" => $project,
         "summary" => $summary,
         "findings" => $findings
     ]);

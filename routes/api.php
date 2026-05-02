@@ -45,6 +45,12 @@ Route::get('/findings-overdue',[DashboardController::class,'overdue']);
 
 Route::post('/action-plans', [ActionPlanController::class, 'store']);
 Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
+Route::post('/action-plans/{id}/submit', [ActionPlanController::class, 'submit']);
+Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
+Route::post('/action-plans/{id}/start', [ActionPlanController::class, 'start']);
+Route::post('/action-plans/{id}/done', [ActionPlanController::class, 'done']);
+Route::post('/action-plans/{id}/verify', [ActionPlanController::class, 'verify']);
+Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
 
 Route::post('/evidences', [EvidenceController::class, 'store']);
 

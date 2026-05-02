@@ -11,7 +11,7 @@ class ActionPlan extends Model
         'root_cause',
         'corrective_action',
         'target_date',
-        'status'
+        'status',
     ];
 
     public function findingDepartment()
@@ -27,5 +27,24 @@ class ActionPlan extends Model
     public function verifications()
     {
         return $this->hasMany(Verification::class);
+    }
+
+    public function canTransitionTo($newStatus)
+    {
+        $flow = [
+            'draft' => ['submitted'],
+            'need_revision' => ['submitted'], // 🔥 ini penting
+            'submitted' => ['approved'],
+            'approved' => ['in_progress'],
+            'in_progress' => ['done'],
+            'done' => ['verified'],
+        ];
+
+        return in_array($newStatus, $flow[$this->status] ?? []);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(ActionPlanComment::class);
     }
 }

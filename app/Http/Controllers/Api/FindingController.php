@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\StatusService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Finding;
@@ -131,15 +132,19 @@ public function show($id)
                 'name' => $fd->department->name, // ✅ INI WAJIB
                 'status' => $fd->status,
 
-                'action_plans' => $fd->actionPlans->map(function ($ap) {
-                    return [
-                        'id' => $ap->id,
-                        'root_cause' => $ap->root_cause ?? '',
-                        'corrective_action' => $ap->corrective_action ?? '',
-                        'status' => $ap->status,
-                        'target_date' => $ap->target_date,
-                    ];
-                })
+                'action_plans' => $fd->actionPlans->map(fn($ap) => [
+                    'id' => $ap->id,
+                    'root_cause' => $ap->root_cause ?? '',
+                    'corrective_action' => $ap->corrective_action ?? '',
+                    'status' => $ap->status,
+                    'target_date' => $ap->target_date,    
+                    'comments' => $ap->comments->map(fn($c) => [
+                        'role' => $c->role,
+                        'message' => $c->message,
+                        'created_at' => $c->created_at
+                    ])
+                ])
+
             ];
         })
     ]);
@@ -156,18 +161,15 @@ public function store(Request $request)
         'audit_project_id' => 'required|exists:audit_projects,id',
         'title' => 'required|string',
         'description' => 'nullable|string',
-        'risk_rating' => 'required|string',
+        'risk_rating' => 'nullable|string',
         'due_date' => 'nullable|date',
 
-        // 🔥 departments wajib
-        'departments' => 'required|array|min:1',
+        'departments' => 'nullable|array',
         'departments.*' => 'exists:departments,id',
 
-        // 🔥 action plans wajib
-        'action_plans' => 'required|array|min:1',
-        'action_plans.*.department_id' => 'required|exists:departments,id',
-        'action_plans.*.corrective_action' => 'required|string',
-        'action_plans.*.target_date' => 'nullable|date',
+        'action_plans' => 'nullable|array',
+        'action_plans.*.department_id' => 'required_with:action_plans|exists:departments,id',
+        'action_plans.*.corrective_action' => 'required_with:action_plans|string',
     ]);
 
     DB::beginTransaction();
@@ -177,7 +179,12 @@ public function store(Request $request)
         // ===============================
         // GENERATE FINDING CODE
         // ===============================
-        $project = AuditProject::with('company')->findOrFail($request->audit_project_id);
+        $project = AuditProject::with('company')
+        ->findOrFail($request->audit_project_id);
+
+        if (!$project->company) {
+            throw new \Exception('Project belum punya company');
+        }
 
         $companyCode = $project->company->code;
         $year = Carbon::now()->year;
@@ -201,37 +208,39 @@ public function store(Request $request)
             'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
                 ? 'Significant' : 'Moderate',
             'due_date' => $request->due_date,
-            'created_by' => auth()->id() ?? 1
+            'created_by' => auth()->id() ?? 1,
+
+            'status' => 'open' // 🔥 WAJIB
         ]);
 
         // ===============================
         // CREATE FD + ACTION PLAN
         // ===============================
-        foreach ($request->departments as $deptId) {
+        if ($request->departments) {
+            foreach ($request->departments as $deptId) {
 
-            // buat FD
-            $fd = FindingDepartment::create([
-                'finding_id' => $finding->id,
-                'department_id' => $deptId,
-            ]);
-
-            // cari AP yang sesuai department
-            $relatedPlans = collect($request->action_plans)
-                ->where('department_id', $deptId);
-
-            if ($relatedPlans->isEmpty()) {
-                throw new \Exception("Department wajib punya action plan");
-            }
-
-            foreach ($relatedPlans as $ap) {
-
-                \App\Models\ActionPlan::create([
-                    'finding_department_id' => $fd->id,
-                    'root_cause' => $ap['root_cause'] ?? '',
-                    'corrective_action' => $ap['corrective_action'],
-                    'target_date' => $ap['target_date'] ?? null,
-                    'status' => 'draft'
+                $fd = FindingDepartment::create([
+                    'finding_id' => $finding->id,
+                    'department_id' => $deptId,
+                    'status' => 'open'
                 ]);
+
+                if ($request->action_plans) {
+                    $relatedPlans = collect($request->action_plans)
+                        ->where('department_id', $deptId);
+
+                    foreach ($relatedPlans as $ap) {
+                        \App\Models\ActionPlan::create([
+                            'finding_department_id' => $fd->id,
+                            'root_cause' => $ap['root_cause'] ?? '',
+                            'corrective_action' => $ap['corrective_action'],
+                            'target_date' => $ap['target_date'] ?? null,
+                            'status' => 'draft'
+                        ]);
+                    }
+                }
+
+                StatusService::sync($fd->id);
             }
         }
 
@@ -245,6 +254,11 @@ public function store(Request $request)
     } catch (\Exception $e) {
 
         DB::rollBack();
+
+        return response()->json([
+            'message' => 'Failed to create finding',
+            'error' => $e->getMessage()
+        ], 500);
 
         return response()->json([
             'message' => 'Failed to create finding',

@@ -18,17 +18,30 @@ return new class extends Migration
 
             $table->text('root_cause')->nullable();
             $table->text('corrective_action')->nullable();
-
             $table->date('target_date')->nullable();
 
+            // 🔥 STATUS BARU (FIXED)
             $table->enum('status',[
-                'open',
-                'need_review',
-                'completed'
-            ])->default('open');
+                'draft',
+                'submitted',
+                'need_revision',
+                'approved',
+                'in_progress',
+                'done',
+                'verified'
+            ])->default('draft');
 
+            // 🔥 AUDIT FLOW
+            $table->text('auditee_comment')->nullable();
+            $table->timestamp('submitted_at')->nullable();
+            $table->timestamp('verified_at')->nullable();
+
+            // 🔥 Traceable
+            $table->foreignId('submitted_by')->nullable()->constrained('users');
+            $table->foreignId('verified_by')->nullable()->constrained('users');
+
+            // 🔥 WAJIB
             $table->timestamps();
-
         });
     }
 
