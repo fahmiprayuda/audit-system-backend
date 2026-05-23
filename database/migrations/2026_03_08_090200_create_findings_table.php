@@ -33,11 +33,11 @@ return new class extends Migration
                 'Moderate'
             ]);
 
-            $table->date('due_date')->nullable();
+            $table->date('start_date')->nullable();
 
             $table->enum('status',[
                 'open',
-                'need_review',
+                'need_further_review',
                 'closed'
             ])->default('open');
 

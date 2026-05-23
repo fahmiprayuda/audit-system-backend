@@ -5,43 +5,46 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    public function up(): void
-    {
-        Schema::create('action_plans', function (Blueprint $table) {
+        {
+            public function up(): void
+            {
+                Schema::create('action_plans', function (Blueprint $table) {
 
-            $table->id();
+                    $table->id();
 
-            $table->foreignId('finding_department_id')
-                ->constrained()
-                ->cascadeOnDelete();
+                    $table->foreignId('finding_department_id')
+                        ->constrained()
+                        ->cascadeOnDelete();
 
-            $table->text('root_cause')->nullable();
-            $table->text('corrective_action')->nullable();
-            $table->date('target_date')->nullable();
+                    $table->text('root_cause')->nullable();
 
-            // 🔥 STATUS BARU (FIXED)
-            $table->enum('status',[
-                'draft',
-                'submitted',
-                'need_revision',
-                'approved',
-                'in_progress',
-                'done',
-                'verified'
-            ])->default('draft');
+                    $table->text('corrective_action');
 
-            // 🔥 AUDIT FLOW
-            $table->text('auditee_comment')->nullable();
-            $table->timestamp('submitted_at')->nullable();
-            $table->timestamp('verified_at')->nullable();
+                    $table->date('start_date')->nullable();
+                    $table->date('target_date')->nullable();
 
-            // 🔥 Traceable
-            $table->foreignId('submitted_by')->nullable()->constrained('users');
-            $table->foreignId('verified_by')->nullable()->constrained('users');
+                    $table->enum('status',[
+                        'draft', //open
+                        'submitted', //NFR
+                        'need_revision', //NFR
+                        'approved' //closed
+                    ])->default('draft');
 
-            // 🔥 WAJIB
-            $table->timestamps();
+                    // Audit trail
+
+                    $table->timestamp('submitted_at')->nullable();
+                    $table->timestamp('approved_at')->nullable();
+
+                    $table->foreignId('submitted_by')
+                        ->nullable()
+                        ->constrained('users');
+
+                    $table->foreignId('approved_by')
+                        ->nullable()
+                        ->constrained('users')
+                        ->nullOnDelete();
+
+                    $table->timestamps();
         });
     }
 

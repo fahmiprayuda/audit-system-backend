@@ -21,12 +21,11 @@ return new class extends Migration
             $table->string('project_name');
 
             $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
 
-            $table->enum('status',[
+            $table->enum('status', [
                 'open',
-                'ongoing',
-                'completed'
+                'in_progress',
+                'closed'
             ])->default('open');
 
             $table->foreignId('created_by')

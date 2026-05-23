@@ -19,7 +19,8 @@ return new class extends Migration
                 'in_progress',
                 'done',
                 'verified',
-                'need_revision' // 🔥 tambahin ini
+                'need_revision',
+                'closed'
             ])->change();
         });
     }

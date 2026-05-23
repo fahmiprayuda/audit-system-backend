@@ -6,16 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Finding extends Model
 {
+    protected $casts = [
+        'start_date' => 'date',
+    ];
+
     protected $fillable = [
-    'audit_project_id',
-    'finding_code',
-    'title',
-    'description',
-    'risk_rating',
-    'risk_category',
-    'due_date',
-    'created_by',
-    'status'
+        'audit_project_id',
+        'finding_code',
+        'title',
+        'description',
+        'risk_rating',
+        'risk_category',
+        'start_date',
+        'created_by',
+        'status'
     ];
 
 
@@ -24,12 +28,41 @@ class Finding extends Model
     return $this->belongsTo(AuditProject::class,'audit_project_id');
     }
 
-    public function departments()
+    public function actionPlans()
     {
-        return $this->belongsToMany(
-            Department::class,
-            'finding_departments'
+        return $this->hasManyThrough(
+            ActionPlan::class,
+            FindingDepartment::class,
+            'finding_id',
+            'finding_department_id'
         );
+    }
+
+    public function syncStatus()
+    {
+        $actionPlans = $this->actionPlans();
+
+        if ($actionPlans->count() === 0) {
+
+            $this->update([
+                'status' => 'open'
+            ]);
+
+        } else {
+
+            $allApproved = $actionPlans
+                ->where('status', '!=', 'approved')
+                ->doesntExist();
+
+            $this->update([
+                'status' => $allApproved
+                    ? 'closed'
+                    : 'need_further_review'
+            ]);
+        }
+
+        // sync project juga
+        $this->project?->syncStatus();
     }
 
     public function findingDepartments()
@@ -40,5 +73,10 @@ class Finding extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function getDueDateAttribute()
+    {
+        return $this->actionPlans()->max('target_date');
     }
 }

@@ -10,19 +10,14 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::table('findings', function (Blueprint $table) {
-            $table->string('status')->default('open')->after('due_date');
-        });
-    }
+{
+    Schema::table('findings', function (Blueprint $table) {
+        $table->string('status')->default('open');
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('findings', function (Blueprint $table) {
-            $table->dropColumn('status');
-        });
+        
     }
 };
