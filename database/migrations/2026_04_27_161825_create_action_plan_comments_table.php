@@ -13,9 +13,22 @@ return new class extends Migration
     {
         Schema::create('action_plan_comments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('action_plan_id')->constrained()->cascadeOnDelete();
+            
+            $table->foreignId('action_plan_id')
+            ->constrained()
+            ->cascadeOnDelete();
+
             $table->string('role'); // auditor / auditee
+            
             $table->text('message');
+            
+            $table->foreignId('created_by')
+            ->nullable()
+            ->constrained('users')
+            ->nullOnDelete();
+
+            
+            
             $table->timestamps();
         });
     }

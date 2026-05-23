@@ -51,6 +51,7 @@ Route::post('/action-plans/{id}/start', [ActionPlanController::class, 'start']);
 Route::post('/action-plans/{id}/done', [ActionPlanController::class, 'done']);
 Route::post('/action-plans/{id}/verify', [ActionPlanController::class, 'verify']);
 Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
+Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
 
 Route::post('/evidences', [EvidenceController::class, 'store']);
 

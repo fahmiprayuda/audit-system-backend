@@ -41,15 +41,8 @@ public function index(Request $request)
     }
 
     // FILTER RISK
-    if ($request->risk_rating) {
-        $query->where('risk_rating', $request->risk_rating);
-    }
-
-    // // 🔥 FILTER STATUS (PINDAH KE FD)
     if ($request->status) {
-        $query->whereHas('findingDepartments', function ($q) use ($request) {
-            $q->where('status', $request->status);
-        });
+        $query->where('status', $request->status);
     }
 
     // FILTER DEPARTMENT
@@ -71,11 +64,13 @@ public function index(Request $request)
         // 🔥 OVERDUE BASED ON FD (optional nanti bisa per dept)
         $f->is_overdue = false;
 
-        if ($f->due_date) {
-            if (Carbon::parse($f->due_date)->isPast()) {
-                $f->is_overdue = true;
-            }
-        }
+        $f->is_overdue = $f->findingDepartments
+                ->flatMap->actionPlans
+                ->contains(fn($ap) =>
+                    $ap->target_date &&
+                    Carbon::parse($ap->target_date)->isPast() &&
+                    $ap->status !== 'approved'
+                );
 
         $f->departments = $f->findingDepartments->map(function ($fd) {
         return [
@@ -111,7 +106,8 @@ public function show($id)
         'findingDepartments.department',
         'findingDepartments.actionPlans',
         'findingDepartments.actionPlans.evidences',
-        'findingDepartments.actionPlans.verifications'
+        'findingDepartments.actionPlans.verifications',
+        'findingDepartments.actionPlans.comments'
     ])->findOrFail($id);
 
     return response()->json([
@@ -133,17 +129,25 @@ public function show($id)
                 'status' => $fd->status,
 
                 'action_plans' => $fd->actionPlans->map(fn($ap) => [
-                    'id' => $ap->id,
-                    'root_cause' => $ap->root_cause ?? '',
-                    'corrective_action' => $ap->corrective_action ?? '',
-                    'status' => $ap->status,
-                    'target_date' => $ap->target_date,    
-                    'comments' => $ap->comments->map(fn($c) => [
-                        'role' => $c->role,
-                        'message' => $c->message,
-                        'created_at' => $c->created_at
-                    ])
+                'id' => $ap->id,
+                'root_cause' => $ap->root_cause ?? '',
+                'corrective_action' => $ap->corrective_action ?? '',
+                'status' => $ap->status,
+                'start_date' => $ap->start_date,
+                'target_date' => $ap->target_date,
+
+                'evidences' => $ap->evidences->map(fn($e) => [
+                    'id' => $e->id,
+                    'file_name' => $e->file_name,
+                    'file_path' => $e->file_path,
+                ]),
+
+                'comments' => $ap->comments->map(fn($c) => [
+                    'role' => $c->role,
+                    'message' => $c->message,
+                    'created_by' => $c->created_by,
                 ])
+            ])
 
             ];
         })
@@ -207,7 +211,7 @@ public function store(Request $request)
             'risk_rating' => $request->risk_rating,
             'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
                 ? 'Significant' : 'Moderate',
-            'due_date' => $request->due_date,
+            'start_date' => now(),
             'created_by' => auth()->id() ?? 1,
 
             'status' => 'open' // 🔥 WAJIB
@@ -234,6 +238,7 @@ public function store(Request $request)
                             'finding_department_id' => $fd->id,
                             'root_cause' => $ap['root_cause'] ?? '',
                             'corrective_action' => $ap['corrective_action'],
+                            'start_date' => $ap['start_date'] ?? null,
                             'target_date' => $ap['target_date'] ?? null,
                             'status' => 'draft'
                         ]);
@@ -260,10 +265,6 @@ public function store(Request $request)
             'error' => $e->getMessage()
         ], 500);
 
-        return response()->json([
-            'message' => 'Failed to create finding',
-            'error' => $e->getMessage()
-        ], 500);
     }
 }
 

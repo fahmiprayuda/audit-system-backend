@@ -10,67 +10,79 @@ class StatusService
 {
     public static function sync($findingDepartmentId)
     {
-        $fd = FindingDepartment::with('actionPlans')->find($findingDepartmentId);
+        $fd = FindingDepartment::with('actionPlans')
+            ->find($findingDepartmentId);
 
-        if (!$fd) return;
-
-        $statuses = $fd->actionPlans->pluck('status');
-
-        // ================= FD =================
-        if ($statuses->contains('need_revision')) {
-            $fd->status = 'need_revision';
-        } elseif ($statuses->every(fn($s) => $s === 'verified')) {
-            $fd->status = 'closed';
-        } elseif ($statuses->contains('submitted') || $statuses->contains('approved')) {
-            $fd->status = 'in_progress';
-        } else {
-            $fd->status = 'open';
+        if (!$fd) {
+            return;
         }
 
-        $fd->save();
+        // ===================================
+        // FINDING STATUS
+        // ===================================
 
         self::syncFinding($fd->finding_id);
     }
 
     private static function syncFinding($findingId)
     {
-        $finding = Finding::with('findingDepartments')->find($findingId);
+        $finding = Finding::with(
+            'findingDepartments.actionPlans'
+        )->find($findingId);
 
-        if (!$finding) return;
+        if (!$finding) {
+            return;
+        }
 
-        $statuses = $finding->findingDepartments->pluck('status');
+        // Ambil semua AP dari semua department
+        $actionPlans = $finding->findingDepartments
+            ->flatMap->actionPlans;
 
-        if ($statuses->contains('need_revision')) {
-            $finding->status = 'need_revision';
-        } elseif ($statuses->every(fn($s) => $s === 'closed')) {
-            $finding->status = 'closed';
-        } elseif ($statuses->contains('in_progress')) {
-            $finding->status = 'in_progress';
-        } else {
+        // Belum ada AP
+        if ($actionPlans->count() === 0) {
+
             $finding->status = 'open';
+
+        } else {
+
+            // Semua AP approved
+            $allApproved = $actionPlans
+                ->every(fn($ap) => $ap->status === 'approved');
+
+            $finding->status = $allApproved
+                ? 'closed'
+                : 'need_further_review';
         }
 
         $finding->save();
 
-        self::syncProject($finding->audit_project_id);
+        self::syncProject(
+            $finding->audit_project_id
+        );
     }
 
     private static function syncProject($projectId)
     {
-        $project = AuditProject::with('findings')->find($projectId);
+        $project = AuditProject::with('findings')
+            ->find($projectId);
 
-        if (!$project) return;
+        if (!$project) {
+            return;
+        }
 
-        $statuses = $project->findings->pluck('status');
+        // Belum ada finding
+        if ($project->findings->count() === 0) {
 
-        if ($statuses->contains('need_revision')) {
-            $project->status = 'need_revision';
-        } elseif ($statuses->every(fn($s) => $s === 'closed')) {
-            $project->status = 'closed';
-        } elseif ($statuses->contains('in_progress')) {
-            $project->status = 'in_progress';
-        } else {
             $project->status = 'open';
+
+        } else {
+
+            $allClosed = $project->findings
+                ->every(fn($f) => $f->status === 'closed');
+
+            $project->status = $allClosed
+                ? 'closed'
+                : 'in_progress';
         }
 
         $project->save();

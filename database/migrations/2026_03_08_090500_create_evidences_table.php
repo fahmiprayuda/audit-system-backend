@@ -18,11 +18,13 @@ return new class extends Migration
 
             $table->string('file_path');
 
+            $table->string('file_name')->nullable();
+
             $table->foreignId('uploaded_by')
+                ->nullable()
                 ->constrained('users');
 
             $table->timestamps();
-
         });
     }
 

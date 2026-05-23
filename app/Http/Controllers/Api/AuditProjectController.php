@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\AuditProject;
-use App\Models\Finding;
 use App\Models\Company;
 use Carbon\Carbon;
 
@@ -17,12 +16,10 @@ class AuditProjectController extends Controller
     // ===============================
     public function index()
     {
-        return AuditProject::with('company')->get();
+        return AuditProject::with('company')
+        ->latest()->get();
     }
 
-    // ===============================
-    // GET DETAIL PROJECT
-    // ===============================
     public function show($id)
 {
     $project = \App\Models\AuditProject::with([
@@ -155,7 +152,6 @@ class AuditProjectController extends Controller
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
             'start_date'   => $request->start_date,
-            'end_date'     => $request->end_date,
             'created_by'   => auth()->id() ?? 1
         ]);
 
@@ -174,7 +170,6 @@ class AuditProjectController extends Controller
             'project_name' => 'required|string|max:255',
             'audit_type'   => 'nullable|string|max:255',
             'start_date'   => 'nullable|date',
-            'end_date'     => 'nullable|date|after_or_equal:start_date',
         ]);
 
         $project = AuditProject::findOrFail($id);
@@ -192,7 +187,6 @@ class AuditProjectController extends Controller
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
             'start_date'   => $request->start_date,
-            'end_date'     => $request->end_date
         ]);
 
         return response()->json([

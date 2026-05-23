@@ -33,8 +33,8 @@ class FindingSeeder extends Seeder
                     'title' => 'Selisih stock bahan baku di gudang',
                     'description' => 'Stock fisik tidak sesuai dengan sistem inventory',
                     'risk_rating' => 'Extreme',
+                    'start_date' => now(),
                     'status' => 'open',
-                    'due_date' => '2026-04-01',
                     'departments' => [$supply]
                     ],
 
@@ -42,8 +42,8 @@ class FindingSeeder extends Seeder
                     'title' => 'Dokumentasi inspeksi kualitas tidak lengkap',
                     'description' => 'Beberapa laporan QC tidak tersedia',
                     'risk_rating' => 'Moderate',
+                    'start_date' => now(),
                     'status' => 'open',
-                    'due_date' => '2026-04-10',
                     'departments' => [$quality]
                     ]
 
@@ -68,8 +68,8 @@ class FindingSeeder extends Seeder
                         ? 'Significant'
                         : 'Moderate',
 
+                    'start_date' => now(),
                     'status' => $data['status'],
-                    'due_date' => $data['due_date']
 
                 ]);
 

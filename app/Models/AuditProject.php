@@ -13,11 +13,31 @@ class AuditProject extends Model
         'project_name',
         'start_date',
         'status',
-        'end_date',
         'created_by'
     ];
 
 
+    public function syncStatus()
+    {
+        if ($this->findings()->count() === 0) {
+
+            $this->update([
+                'status' => 'open'
+            ]);
+
+            return;
+        }
+
+        $allClosed = $this->findings()
+            ->where('status', '!=', 'closed')
+            ->doesntExist();
+
+        $this->update([
+            'status' => $allClosed
+                ? 'closed'
+                : 'in_progress'
+        ]);
+    }
     public function company()
     {
         return $this->belongsTo(Company::class);
