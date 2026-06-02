@@ -10,78 +10,78 @@ use App\Models\User;
 
 class FindingSeeder extends Seeder
 {
-    public function run(): void
-    {
-        $project = AuditProject::first();
-        $user = User::first();
+    // public function run(): void
+    // {
+    //     $project = AuditProject::first();
+    //     $user = User::first();
 
-        $finance = Department::where('name','Finance & Accounting')->first();
-        $manufacturing = Department::where('name','Manufacturing')->first();
-        $procurement = Department::where('name','Procurement')->first();
-        $supply = Department::where('name','Supply Chain')->first();
-        $quality = Department::where('name','Quality')->first();
-        $it = Department::where('name','IT Dept')->first();
-        $rnd = Department::where('name','Research & Development')->first();
-        $marketing = Department::where('name','Marketing')->first();
-        $trade = Department::where('name','Trade Marketing')->first();
-        $opex = Department::where('name','Operational Excellence')->first();
-        $hrga = Department::where('name','HRGA')->first();
+    //     $finance = Department::where('name','Finance & Accounting')->first();
+    //     $manufacturing = Department::where('name','Manufacturing')->first();
+    //     $procurement = Department::where('name','Procurement')->first();
+    //     $supply = Department::where('name','Supply Chain')->first();
+    //     $quality = Department::where('name','Quality')->first();
+    //     $it = Department::where('name','IT Dept')->first();
+    //     $rnd = Department::where('name','Research & Development')->first();
+    //     $marketing = Department::where('name','Marketing')->first();
+    //     $trade = Department::where('name','Trade Marketing')->first();
+    //     $opex = Department::where('name','Operational Excellence')->first();
+    //     $hrga = Department::where('name','HRGA')->first();
 
-        $findings = [
+    //     $findings = [
 
-                    [
-                    'title' => 'Selisih stock bahan baku di gudang',
-                    'description' => 'Stock fisik tidak sesuai dengan sistem inventory',
-                    'risk_rating' => 'Extreme',
-                    'start_date' => now(),
-                    'status' => 'open',
-                    'departments' => [$supply]
-                    ],
+    //                 [
+    //                 'title' => 'Selisih stock bahan baku di gudang',
+    //                 'description' => 'Stock fisik tidak sesuai dengan sistem inventory',
+    //                 'risk_rating' => 'Extreme',
+    //                 'start_date' => now(),
+    //                 'status' => 'open',
+    //                 'departments' => [$supply]
+    //                 ],
 
-                    [
-                    'title' => 'Dokumentasi inspeksi kualitas tidak lengkap',
-                    'description' => 'Beberapa laporan QC tidak tersedia',
-                    'risk_rating' => 'Moderate',
-                    'start_date' => now(),
-                    'status' => 'open',
-                    'departments' => [$quality]
-                    ]
+    //                 [
+    //                 'title' => 'Dokumentasi inspeksi kualitas tidak lengkap',
+    //                 'description' => 'Beberapa laporan QC tidak tersedia',
+    //                 'risk_rating' => 'Moderate',
+    //                 'start_date' => now(),
+    //                 'status' => 'open',
+    //                 'departments' => [$quality]
+    //                 ]
 
-                    ];
+    //                 ];
 
-        $counter = 1;
-        foreach ($findings as $data) {
+    //     $counter = 1;
+    //     foreach ($findings as $data) {
 
-            $finding = Finding::create([
+    //         $finding = Finding::create([
 
-                    'audit_project_id' => $project->id,
-                    'created_by' => $user->id,
+    //                 'audit_project_id' => $project->id,
+    //                 'created_by' => $user->id,
 
-                    'finding_code' => 'FND-2026-' . str_pad($counter,3,'0',STR_PAD_LEFT),
+    //                 'finding_code' => 'FND-2026-' . str_pad($counter,3,'0',STR_PAD_LEFT),
 
-                    'title' => $data['title'],
-                    'description' => $data['description'],
+    //                 'title' => $data['title'],
+    //                 'description' => $data['description'],
 
-                    'risk_rating' => $data['risk_rating'],
+    //                 'risk_rating' => $data['risk_rating'],
 
-                    'risk_category' => in_array($data['risk_rating'], ['Extreme','Major'])
-                        ? 'Significant'
-                        : 'Moderate',
+    //                 'risk_category' => in_array($data['risk_rating'], ['Extreme','Major'])
+    //                     ? 'Significant'
+    //                     : 'Moderate',
 
-                    'start_date' => now(),
-                    'status' => $data['status'],
+    //                 'start_date' => now(),
+    //                 'status' => $data['status'],
 
-                ]);
+    //             ]);
 
-                $counter++;
+    //             $counter++;
 
-            foreach ($data['departments'] as $dept) {
-                if ($dept) {
-                    $finding->departments()->attach($dept->id);
-                }
-            }
+    //         foreach ($data['departments'] as $dept) {
+    //             if ($dept) {
+    //                 $finding->departments()->attach($dept->id);
+    //             }
+    //         }
 
-        }
+    //     }
 
-    }
+    // }
 }

@@ -14,10 +14,15 @@ class AuditProjectController extends Controller
     // ===============================
     // GET ALL PROJECTS
     // ===============================
-    public function index()
+    public function index(Request $request)
     {
-        return AuditProject::with('company')
-        ->latest()->get();
+        $perPage = $request->get('per_page', 10);
+
+        $projects = AuditProject::with('company')
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json($projects);
     }
 
     public function show($id)
@@ -55,7 +60,9 @@ class AuditProjectController extends Controller
             'risk_rating' => $finding->risk_rating,
             'risk_category' => $finding->risk_category,
             'status' => $finding->status,
-            'due_date' => $finding->due_date,
+            'start_date' => $finding->start_date
+            ? $finding->start_date->format('Y-m-d')
+            : null,
 
             'departments' => $finding->findingDepartments->map(function ($fd) {
                 return [

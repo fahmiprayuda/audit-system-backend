@@ -116,8 +116,10 @@ public function show($id)
         'title' => $finding->title,
         'description' => $finding->description ?? '',
         'risk_rating' => $finding->risk_rating,
-        'due_date' => $finding->due_date,
 
+        'start_date' => $finding->start_date
+            ? Carbon::parse($finding->start_date)->format('Y-m-d')
+            : null,
         // 🔥 OPTIONAL: summary status
         'status' => $finding->status,
 
@@ -166,7 +168,7 @@ public function store(Request $request)
         'title' => 'required|string',
         'description' => 'nullable|string',
         'risk_rating' => 'nullable|string',
-        'due_date' => 'nullable|date',
+        'start_date' => 'required|date',
 
         'departments' => 'nullable|array',
         'departments.*' => 'exists:departments,id',
@@ -209,12 +211,13 @@ public function store(Request $request)
             'title' => $request->title,
             'description' => $request->description ?? '',
             'risk_rating' => $request->risk_rating,
+
             'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
                 ? 'Significant' : 'Moderate',
-            'start_date' => now(),
+            
+            'start_date' => $request->start_date,
             'created_by' => auth()->id() ?? 1,
-
-            'status' => 'open' // 🔥 WAJIB
+            'status' => 'open'
         ]);
 
         // ===============================
@@ -279,7 +282,8 @@ public function update(Request $request, $id)
         'title' => 'sometimes|string',
         'description' => 'nullable|string',
         'risk_rating' => 'sometimes|string',
-        'due_date' => 'nullable|date'
+        'start_date' => 'nullable|date',
+        'department_id' => 'nullable|exists:departments,id',
     ]);
 
     $finding = Finding::findOrFail($id);
@@ -290,14 +294,29 @@ public function update(Request $request, $id)
         'title' => $request->title ?? $finding->title,
         'description' => $request->description ?? $finding->description,
         'risk_rating' => $riskRating,
-        'risk_category' => in_array($riskRating, ['Extreme', 'Major'])
-            ? 'Significant' : 'Moderate',
-        'due_date' => $request->due_date ?? $finding->due_date
+
+        'risk_category' =>
+            in_array($riskRating, ['Extreme', 'Major'])
+                ? 'Significant'
+                : 'Moderate',
+
+        'start_date' =>
+            $request->filled('start_date')
+                ? $request->start_date
+                : $finding->start_date,
+
+        'department_id' =>
+            $request->filled('department_id')
+                ? $request->department_id
+                : $finding->department_id,
     ]);
+
+    // refresh biar data terbaru kebaca
+    $finding->refresh();
 
     return response()->json([
         'message' => 'Finding updated successfully',
-        'data' => $finding
+        'data' => $finding,
     ]);
 }
 
@@ -308,10 +327,35 @@ DELETE
 
 public function destroy($id)
 {
-    Finding::findOrFail($id)->delete();
+    $finding = Finding::findOrFail($id);
+
+    $project = $finding->project;
+
+    // hapus finding
+    $finding->delete();
+
+    // reload findings
+    $project->load("findings");
+
+    $findings = $project->findings;
+
+    // ===== update status =====
+    if ($findings->count() === 0) {
+        $project->status = "open";
+
+    } elseif (
+        $findings->every(fn ($f) => $f->status === "closed")
+    ) {
+        $project->status = "closed";
+
+    } else {
+        $project->status = "in progress";
+    }
+
+    $project->save();
 
     return response()->json([
-        'message' => 'Finding deleted successfully'
+        "message" => "Finding deleted"
     ]);
 }
 

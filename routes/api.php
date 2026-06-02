@@ -11,12 +11,25 @@ use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\FindingDepartmentController;
-
+use App\Http\Controllers\Api\AuthController;
 
 Route::get('/test', function () {
     return response()->json([
         'message' => 'API working'
     ]);
+});
+
+Route::prefix("dashboard")->group(function () {
+    Route::get(
+        "/summary",
+        [DashboardController::class,"summary"]
+    );
+
+    Route::get("/findings-by-risk",[DashboardController::class,"findingsByRisk"]);
+    Route::get("/findings-by-category",[DashboardController::class,"findingsByCategory"]);
+    Route::get("/action-plans-by-status",[DashboardController::class,"actionPlansByStatus"]);
+    Route::get("/overdue-action-plans",[DashboardController::class,"overdueActionPlans"]);
+    Route::get("/overdue-by-department",[DashboardController::class,"overdueByDepartment"]);
 });
 
 Route::get('/projects', [AuditProjectController::class, 'index']);
@@ -37,12 +50,6 @@ Route::put('/findings/{id}', [FindingController::class,'update']);
 Route::delete('/findings/{id}', [FindingController::class,'destroy']);
 Route::post('/findings/add-department', [FindingController::class, 'addDepartment']);
 
-
-Route::get('/dashboard', [DashboardController::class, 'index']);
-Route::get('/dashboard-summary',[DashboardController::class,'summary']);
-Route::get('/findings-by-risk',[DashboardController::class,'findingsByRisk']);
-Route::get('/findings-overdue',[DashboardController::class,'overdue']);
-
 Route::post('/action-plans', [ActionPlanController::class, 'store']);
 Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 Route::post('/action-plans/{id}/submit', [ActionPlanController::class, 'submit']);
@@ -60,3 +67,8 @@ Route::post('/verifications', [VerificationController::class, 'store']);
 Route::post('/finding-departments', [FindingDepartmentController::class, 'store']);
 Route::put('/finding-departments/{id}', [FindingDepartmentController::class, 'updateStatus']);
 Route::delete('/finding-departments/{id}', [FindingDepartmentController::class, 'destroy']);
+
+Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', fn () => auth()->user());
+});
