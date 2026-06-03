@@ -13,8 +13,12 @@ return Application::configure(
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
+    ->withMiddleware(function ($middleware) {
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (

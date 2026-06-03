@@ -22,7 +22,7 @@ class ActionPlan extends Model
 
     public function findingDepartment()
     {
-        return $this->belongsTo(FindingDepartment::class, 'finding_department_id');
+        return $this->belongsTo(FindingDepartment::class);
     }
 
     public function evidences() // 🔥 rename
