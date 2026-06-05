@@ -62,50 +62,59 @@ class ActionPlanController extends Controller
     /* ================= ACTION ================= */
 
     public function submit(Request $request, $id)
-{
-    if (!$request->auditee_comment || trim($request->auditee_comment) === '') {
-        return response()->json([
-            'message' => 'Comment wajib diisi'
-        ], 400);
-    }
-
-    $ap = ActionPlan::findOrFail($id);
-
-    $ap->update([
-        'status' => 'submitted',
-        'submitted_at' => now(),
-        'submitted_by' => auth()->id()
-    ]);
-
-    // SAVE COMMENT
-    ActionPlanComment::create([
-        'action_plan_id' => $ap->id,
-        'role' => 'auditee',
-        'message' => $request->auditee_comment,
-        'created_by' => 1
-    ]);
-
-    // SAVE EVIDENCES
-    if ($request->hasFile('evidences')) {
-
-        foreach ($request->file('evidences') as $file) {
-
-            $path = $file->store('evidences', 'public');
-
-            $ap->evidences()->create([
-                'file_path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-                'uploaded_by' => 1,
-            ]);
+    {
+        if (!$request->auditee_comment || trim($request->auditee_comment) === '') {
+            return response()->json([
+                'message' => 'Comment wajib diisi'
+            ], 400);
         }
+
+        $ap = ActionPlan::findOrFail($id);
+
+        if (!$ap->canTransitionTo('submitted')) {
+            return response()->json([
+                'message' => 'Invalid status transition'
+            ], 400);
+        }
+
+        $ap->update([
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'submitted_by' => auth()->id()
+        ]);
+
+        ActionPlanComment::create([
+            'action_plan_id' => $ap->id,
+            'role' => auth()->user()->role,
+            'message' => $request->auditee_comment,
+            'created_by' => auth()->id()
+        ]);
+
+        if ($request->hasFile('evidences')) {
+
+            foreach ($request->file('evidences') as $file) {
+
+                $path = $file->store(
+                    'evidences',
+                    'public'
+                );
+
+                $ap->evidences()->create([
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'uploaded_by' => auth()->id(),
+                ]);
+            }
+        }
+
+        StatusService::sync(
+            $ap->finding_department_id
+        );
+
+        return response()->json([
+            'message' => 'Submitted'
+        ]);
     }
-
-    StatusService::sync($ap->finding_department_id);
-
-    return response()->json([
-        'message' => 'Submitted'
-    ]);
-}
 
     public function reject(Request $request, $id)
     {

@@ -173,9 +173,12 @@ public function show($id)
                 ]),
 
                 'comments' => $ap->comments->map(fn($c) => [
+                    'id' => $c->id,
                     'role' => $c->role,
                     'message' => $c->message,
                     'created_by' => $c->created_by,
+                    'created_at' => $c->created_at,
+                    'updated_at' => $c->updated_at,
                 ])
             ])
 
