@@ -13,6 +13,32 @@ use Carbon\Carbon;
 
 class FindingController extends Controller
 {
+    private function authorizeAuditee($findingId)
+    {
+        $user = auth()->user();
+
+        if (!$user || $user->role !== 'auditee') {
+            return;
+        }
+
+        $fdId = request('fd');
+
+        $allowed = FindingDepartment::where(
+            'id',
+            $fdId
+        )
+        ->where(
+            'finding_id',
+            $findingId
+        )
+        ->where(
+            'department_id',
+            $user->department_id
+        )
+        ->exists();
+
+        abort_unless($allowed, 403);
+    }
 
 /* =====================================================
 GET ALL FINDINGS
@@ -101,6 +127,8 @@ SHOW DETAIL
 
 public function show($id)
 {
+    $this->authorizeAuditee($id);   
+
     $finding = Finding::with([
         'project.company',
         'findingDepartments.department',

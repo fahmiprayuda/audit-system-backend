@@ -7,8 +7,11 @@ use Illuminate\Http\Request;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, $role)
-    {
+    public function handle(
+        Request $request,
+        Closure $next,
+        ...$roles
+    ) {
         $user = auth()->user();
 
         if (!$user) {
@@ -17,7 +20,7 @@ class RoleMiddleware
             ], 401);
         }
 
-        if ($user->role !== $role) {
+        if (!in_array($user->role, $roles)) {
             return response()->json([
                 'message' => 'Forbidden'
             ], 403);

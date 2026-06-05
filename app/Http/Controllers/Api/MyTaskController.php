@@ -9,13 +9,14 @@ class MyTaskController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = auth()->user()->load('department');
 
         if (!$user->department_id) {
             return response()->json([
                 'message' => 'User has no department'
             ], 400);
         }
+
 
         $tasks = ActionPlan::with([
             'findingDepartment.department',
@@ -28,6 +29,12 @@ class MyTaskController extends Controller
         ->get();
 
         return response()->json([
+            'department' => [
+                'id' => $user->department->id,
+                'name' => $user->department->name,
+            ],
+
+
             'summary' => [
                 'total' => $tasks->count(),
                 'draft' => $tasks->where('status', 'draft')->count(),
@@ -36,7 +43,38 @@ class MyTaskController extends Controller
                 'approved' => $tasks->where('status', 'approved')->count(),
             ],
 
-            'tasks' => $tasks
+            'tasks' => $tasks->map(function ($task) {
+
+                return [
+
+                    'id' => $task->id,
+
+                    'finding_id' =>
+                        $task->findingDepartment->finding->id,
+
+                    'finding_code' =>
+                        $task->findingDepartment->finding->finding_code,
+
+                    'finding_department_id' =>
+                        $task->findingDepartment->id,
+
+                    'title' =>
+                        $task->findingDepartment->finding->title,
+
+                    'root_cause' =>
+                        $task->root_cause,
+
+                    'corrective_action' =>
+                        $task->corrective_action,
+
+                    'status' =>
+                        $task->status,
+
+                    'target_date' =>
+                        $task->target_date,
+
+                ];
+            })
         ]);
     }
 }
