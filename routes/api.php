@@ -7,7 +7,6 @@ use App\Http\Controllers\Api\FindingController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ActionPlanController;
-use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\FindingDepartmentController;
@@ -56,13 +55,7 @@ Route::post('/action-plans', [ActionPlanController::class, 'store']);
 Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 Route::post('/action-plans/{id}/submit', [ActionPlanController::class, 'submit']);
 Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
-Route::post('/action-plans/{id}/start', [ActionPlanController::class, 'start']);
-Route::post('/action-plans/{id}/done', [ActionPlanController::class, 'done']);
-Route::post('/action-plans/{id}/verify', [ActionPlanController::class, 'verify']);
 Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
-Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
-
-Route::post('/evidences', [EvidenceController::class, 'store']);
 
 Route::post('/verifications', [VerificationController::class, 'store']);
 
@@ -85,6 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/findings', [FindingController::class, 'index']);
     Route::get('/findings/{id}', [FindingController::class, 'show']);
+
+    Route::post('/action-plans/{id}/comment',[ActionPlanController::class, 'comment']);
 
     Route::prefix("dashboard")->group(function () {
         Route::get("/summary",[DashboardController::class,"summary"]);
@@ -118,8 +113,6 @@ Route::middleware([
 
         Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
         Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
-        Route::post('/action-plans/{id}/verify', [ActionPlanController::class, 'verify']);
-        Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
     });
 
 Route::middleware([
@@ -143,14 +136,6 @@ Route::middleware([
 
         Route::post('/action-plans/{id}/submit',
             [ActionPlanController::class, 'submit']
-        );
-
-        Route::post('/action-plans/{id}/done',
-            [ActionPlanController::class, 'done']
-        );
-
-        Route::post('/evidences',
-            [EvidenceController::class, 'store']
         );
     });
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
+use App\Models\actionPlanCommentAttachment;
 
 class ActionPlanController extends Controller
 {
@@ -130,9 +131,9 @@ class ActionPlanController extends Controller
 
         ActionPlanComment::create([
             'action_plan_id' => $ap->id,
-            'role' => 'auditor',
+            'role' => auth()->user()->role,
             'message' => $request->message,
-            'created_by' => 1
+            'created_by' => auth()->id()
         ]);
 
         return response()->json([
@@ -151,7 +152,7 @@ class ActionPlanController extends Controller
         $ap->update([
             'status' => 'approved',
             'approved_at' => now(),
-            'approved_by' => 1
+            'approved_by' => auth()->id()
         ]);
 
         StatusService::sync($ap->finding_department_id);
@@ -159,5 +160,43 @@ class ActionPlanController extends Controller
         return response()->json(['message' => 'Approved']);
     }
 
+    public function comment(Request $request, $id)
+    {
+        $request->validate([
+            'message' => 'required|string',
+            'attachments.*' => 'file|max:10240'
+        ]);
+
+        $ap = ActionPlan::findOrFail($id);
+
+        $comment = ActionPlanComment::create([
+            'action_plan_id' => $ap->id,
+            'role' => auth()->user()->role,
+            'message' => $request->message,
+            'created_by' => auth()->id(),
+        ]);
+
+        if ($request->hasFile('attachments')) {
+
+            foreach ($request->file('attachments') as $file) {
+
+                $path = $file->store(
+                    'comment-attachments',
+                    'public'
+                );
+
+                ActionPlanCommentAttachment::create([
+                    'action_plan_comment_id' => $comment->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'uploaded_by' => auth()->id(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Comment added'
+        ]);
+    }
 
 }

@@ -133,9 +133,9 @@ public function show($id)
         'project.company',
         'findingDepartments.department',
         'findingDepartments.actionPlans',
-        'findingDepartments.actionPlans.evidences',
         'findingDepartments.actionPlans.verifications',
-        'findingDepartments.actionPlans.comments'
+        'findingDepartments.actionPlans.comments.creator',
+        'findingDepartments.actionPlans.comments.attachments'
     ])->findOrFail($id);
 
     return response()->json([
@@ -166,19 +166,21 @@ public function show($id)
                 'start_date' => $ap->start_date,
                 'target_date' => $ap->target_date,
 
-                'evidences' => $ap->evidences->map(fn($e) => [
-                    'id' => $e->id,
-                    'file_name' => $e->file_name,
-                    'file_path' => $e->file_path,
-                ]),
+                'comments' => $ap->comments
+                    ->sortBy('created_at')
+                    ->values()
+                    ->map(fn($c) => [
 
-                'comments' => $ap->comments->map(fn($c) => [
-                    'id' => $c->id,
-                    'role' => $c->role,
-                    'message' => $c->message,
-                    'created_by' => $c->created_by,
-                    'created_at' => $c->created_at,
-                    'updated_at' => $c->updated_at,
+                        'id' => $c->id,
+                        'role' => $c->role,
+                        'message' => $c->message,
+                        'user_name' => $c->creator?->name,
+                        'created_at' => $c->created_at,
+                        'attachments' => $c->attachments->map(fn($a) => [
+                            'id' => $a->id,
+                            'file_name' => $a->file_name,
+                            'file_path' => $a->file_path,
+                        ])
                 ])
             ])
 

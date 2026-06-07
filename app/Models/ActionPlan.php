@@ -25,11 +25,6 @@ class ActionPlan extends Model
         return $this->belongsTo(FindingDepartment::class);
     }
 
-    public function evidences() // 🔥 rename
-    {
-        return $this->hasMany(Evidence::class);
-    }
-
     public function verifications()
     {
         return $this->hasMany(Verification::class);
