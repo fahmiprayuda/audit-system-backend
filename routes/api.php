@@ -55,7 +55,6 @@ Route::post('/action-plans', [ActionPlanController::class, 'store']);
 Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 Route::post('/action-plans/{id}/submit', [ActionPlanController::class, 'submit']);
 Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
-Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
 
 Route::post('/verifications', [VerificationController::class, 'store']);
 
@@ -112,7 +111,6 @@ Route::middleware([
         Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 
         Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
-        Route::post('/action-plans/{id}/reject', [ActionPlanController::class, 'reject']);
     });
 
 Route::middleware([

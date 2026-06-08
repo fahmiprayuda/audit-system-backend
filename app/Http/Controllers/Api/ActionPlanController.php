@@ -117,37 +117,9 @@ class ActionPlanController extends Controller
         ]);
     }
 
-    public function reject(Request $request, $id)
-    {
-        if (!$request->message) {
-            return response()->json([
-                'message' => 'Comment wajib diisi'
-            ], 400);
-        }
-
-        $ap = ActionPlan::findOrFail($id);
-
-        $ap->update(['status' => 'need_revision']);
-
-        ActionPlanComment::create([
-            'action_plan_id' => $ap->id,
-            'role' => auth()->user()->role,
-            'message' => $request->message,
-            'created_by' => auth()->id()
-        ]);
-
-        return response()->json([
-            'message' => 'Rejected'
-        ]);
-    }
-
     public function approve($id)
     {
         $ap = ActionPlan::findOrFail($id);
-
-        if (!$ap->canTransitionTo('approved')) {
-            return response()->json(['message' => 'Invalid status'], 400);
-        }
 
         $ap->update([
             'status' => 'approved',
@@ -168,6 +140,12 @@ class ActionPlanController extends Controller
         ]);
 
         $ap = ActionPlan::findOrFail($id);
+
+         if ($ap->status === 'approved') {
+                return response()->json([
+                    'message' => 'Action Plan already closed'
+                ], 403);
+            }
 
         $comment = ActionPlanComment::create([
             'action_plan_id' => $ap->id,
