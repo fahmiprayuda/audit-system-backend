@@ -172,6 +172,7 @@ public function show($id)
                     ->map(fn($c) => [
 
                         'id' => $c->id,
+                        'user_id' => $c->created_by,
                         'role' => $c->role,
                         'message' => $c->message,
                         'user_name' => $c->creator?->name,
