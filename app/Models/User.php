@@ -37,4 +37,9 @@ class User extends Authenticatable
         return $this->belongsTo(Department::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
 }

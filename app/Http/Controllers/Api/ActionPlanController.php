@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Services\StatusService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
 use App\Models\actionPlanCommentAttachment;
+use App\Services\NotificationService;
 
 class ActionPlanController extends Controller
 {
@@ -154,27 +156,71 @@ class ActionPlanController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        if ($request->hasFile('attachments')) {
+        $user = auth()->user();
 
-            foreach ($request->file('attachments') as $file) {
+        $findingId =
+            $ap->findingDepartment
+            ->finding_id;
 
-                $path = $file->store(
-                    'comment-attachments',
-                    'public'
-                );
+        if ($user->role === 'auditee') {
 
-                ActionPlanCommentAttachment::create([
-                    'action_plan_comment_id' => $comment->id,
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $path,
-                    'uploaded_by' => auth()->id(),
-                ]);
-            }
+            $receiverIds = \App\Models\User::whereIn(
+                'role',
+                ['admin', 'auditor']
+            )
+            ->where('id', '!=', $user->id)
+            ->pluck('id');
+
+        } else {
+
+            $departmentId =
+                $ap->findingDepartment
+                ->department_id;
+
+            $receiverIds = \App\Models\User::where(
+                'role',
+                'auditee'
+            )
+            ->where(
+                'department_id',
+                $departmentId
+            )
+            ->where('id', '!=', $user->id)
+            ->pluck('id');
         }
 
-        return response()->json([
-            'message' => 'Comment added'
-        ]);
-    }
+        foreach ($receiverIds as $userId) {
 
-}
+            NotificationService::create(
+                $userId,
+                'comment',
+                'New Comment',
+                $user->name . ' sent a new message',
+                "/findings/{$findingId}"
+            );
+        }
+
+            if ($request->hasFile('attachments')) {
+
+                foreach ($request->file('attachments') as $file) {
+
+                    $path = $file->store(
+                        'comment-attachments',
+                        'public'
+                    );
+
+                    ActionPlanCommentAttachment::create([
+                        'action_plan_comment_id' => $comment->id,
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_path' => $path,
+                        'uploaded_by' => auth()->id(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'message' => 'Comment added'
+            ]);
+        }
+
+    }

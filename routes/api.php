@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\FindingDepartmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MyTaskController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Middleware\RoleMiddleware;
+
 
 Route::get('/test', function () {
     return response()->json([
@@ -64,6 +66,8 @@ Route::delete('/finding-departments/{id}', [FindingDepartmentController::class, 
 
 Route::post('/login', [AuthController::class, 'login']);
 
+
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', fn() => auth()->user());
@@ -88,6 +92,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get("/overdue-action-plans",[DashboardController::class,"overdueActionPlans"]);
         Route::get("/overdue-by-department",[DashboardController::class,"overdueByDepartment"]);
     });
+
+    Route::get('/notifications',[NotificationController::class,'index']);
+    Route::get('/notifications/unread-count',[NotificationController::class,'unreadCount']);
+    Route::post('/notifications/{id}/read',[NotificationController::class,'markRead']);
 
 });
 
