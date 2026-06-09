@@ -15,7 +15,14 @@ class NotificationController extends Controller
             ->notifications()
             ->latest()
             ->limit(30)
-            ->get();
+            ->get([
+                'id',
+                'title',
+                'message',
+                'url',
+                'read_at',
+                'created_at'
+            ]);
     }
 
     public function unreadCount()
