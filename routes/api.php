@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\FindingDepartmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MyTaskController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Middleware\RoleMiddleware;
 
 
@@ -96,6 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications',[NotificationController::class,'index']);
     Route::get('/notifications/unread-count',[NotificationController::class,'unreadCount']);
     Route::post('/notifications/{id}/read',[NotificationController::class,'markRead']);
+
+});
+
+Route::middleware([
+    'auth:sanctum',
+    'role:manager'
+    ])->group(function () {
+
+    Route::apiResource('/users',UserController::class);
 
 });
 
