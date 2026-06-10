@@ -6,10 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Finding extends Model
 {
-    protected $casts = [
-        'start_date' => 'date',
-    ];
-
     protected $fillable = [
         'audit_project_id',
         'finding_code',
@@ -17,7 +13,6 @@ class Finding extends Model
         'description',
         'risk_rating',
         'risk_category',
-        'start_date',
         'created_by',
         'status'
     ];
@@ -77,6 +72,6 @@ class Finding extends Model
 
     public function getDueDateAttribute()
     {
-        return $this->actionPlans()->max('target_date');
+        return $this->actionPlans()->max('due_date');
     }
 }

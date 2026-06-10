@@ -34,24 +34,43 @@ class StatusService
             return;
         }
 
-        // Ambil semua AP dari semua department
-        $actionPlans = $finding->findingDepartments
-            ->flatMap->actionPlans;
+        $actionPlans =
+            $finding->findingDepartments
+                ->flatMap->actionPlans;
 
-        // Belum ada AP
         if ($actionPlans->count() === 0) {
 
             $finding->status = 'open';
 
         } else {
 
-            // Semua AP approved
-            $allApproved = $actionPlans
-                ->every(fn($ap) => $ap->status === 'approved');
+            $hasOverdue = $actionPlans->contains(function ($ap) {
 
-            $finding->status = $allApproved
-                ? 'closed'
-                : 'need_further_review';
+                return
+                    $ap->status !== 'approved'
+                    &&
+                    $ap->due_date
+                    &&
+                    $ap->due_date < now()->toDateString();
+
+            });
+
+            $allApproved = $actionPlans->every(
+                fn($ap) => $ap->status === 'approved'
+            );
+
+            if ($hasOverdue) {
+
+                $finding->status = 'open';
+
+            } elseif ($allApproved) {
+
+                $finding->status = 'closed';
+
+            } else {
+
+                $finding->status = 'need_further_review';
+            }
         }
 
         $finding->save();

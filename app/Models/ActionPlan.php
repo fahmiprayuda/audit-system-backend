@@ -7,16 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class ActionPlan extends Model
 {
     protected $casts = [
-        'start_date' => 'date',
-        'target_date' => 'date',
+        'due_date' => 'date',
     ];
 
     protected $fillable = [
         'finding_department_id',
         'root_cause',
         'corrective_action',
-        'start_date',
-        'target_date',
+        'due_date',
         'status',
     ];
 
@@ -59,8 +57,8 @@ class ActionPlan extends Model
 
     public function getIsOverdueAttribute()
     {
-        return $this->target_date
-            && $this->target_date < now()->toDateString()
+        return $this->due_date
+            && $this->due_date < now()->toDateString()
             && $this->status !== 'approved';
     }
 

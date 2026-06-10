@@ -31,7 +31,7 @@ class ActionPlanSeeder extends Seeder
 
                 'corrective_action' => 'Meningkatkan prosedur kontrol dan melakukan monitoring rutin',
 
-                'target_date' => now()->addDays(rand(10,40)),
+                'due_date' => now()->addDays(rand(10,40)),
 
                 'status' => $status,
 

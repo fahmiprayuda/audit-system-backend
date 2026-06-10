@@ -91,7 +91,7 @@ class DashboardController extends Controller
 
             "overdue" =>
                 ActionPlan::whereDate(
-                    "target_date",
+                    "due_date",
                     "<",
                     Carbon::today()
                 )
@@ -161,7 +161,7 @@ class DashboardController extends Controller
                 "findingDepartment.finding.project",
             ])
             ->whereDate(
-                "target_date",
+                "due_date",
                 "<",
                 Carbon::today()
             )
@@ -171,7 +171,7 @@ class DashboardController extends Controller
                 "approved"
             )
             ->orderBy(
-                "target_date"
+                "due_date"
             )
             ->get()
 
@@ -195,7 +195,7 @@ class DashboardController extends Controller
                 "departments.id"
             )
             ->whereDate(
-                "target_date",
+                "due_date",
                 "<",
                 Carbon::today()
             )

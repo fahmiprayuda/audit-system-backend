@@ -20,7 +20,7 @@ return new class extends Migration
 
             $table->string('project_name');
 
-            $table->date('start_date')->nullable();
+            $table->date('release_date')->nullable();
 
             $table->enum('status', [
                 'open',

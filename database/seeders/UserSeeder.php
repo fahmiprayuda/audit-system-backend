@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'aulia@auditor.local'],
             [
-                'name' => 'Lead Auditor',
+                'name' => 'Nur Aulia Rahmawati',
                 'password' => Hash::make('audit123'),
                 'role' => 'auditor',
                 'department_id' => null,
@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'shavazia@auditee.local'],
             [
-                'name' => 'Warehouse PIC',
+                'name' => 'Shavazia',
                 'password' => Hash::make('auditee123'),
                 'role' => 'auditee',
                 'department_id' => 3,

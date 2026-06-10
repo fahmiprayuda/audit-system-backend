@@ -70,8 +70,8 @@ class MyTaskController extends Controller
                     'status' =>
                         $task->status,
 
-                    'target_date' =>
-                        $task->target_date,
+                    'due_date' =>
+                        $task->due_date,
 
                 ];
             })

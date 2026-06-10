@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Finding;
 use App\Models\FindingDepartment;
+use App\Models\FindingSequence;
 use App\Models\AuditProject;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -87,8 +88,8 @@ public function index(Request $request)
         $f->is_overdue = $f->findingDepartments
                 ->flatMap->actionPlans
                 ->contains(fn($ap) =>
-                    $ap->target_date &&
-                    Carbon::parse($ap->target_date)->isPast() &&
+                    $ap->due_date &&
+                    Carbon::parse($ap->due_date)->isPast() &&
                     $ap->status !== 'approved'
                 );
 
@@ -102,7 +103,7 @@ public function index(Request $request)
                     return [
                         'id' => $ap->id,
                         'status' => $ap->status,
-                        'target_date' => $ap->target_date
+                        'due_date' => $ap->due_date
                     ];
                 })
             ];
@@ -139,9 +140,6 @@ public function show($id)
         'description' => $finding->description ?? '',
         'risk_rating' => $finding->risk_rating,
 
-        'start_date' => $finding->start_date
-            ? Carbon::parse($finding->start_date)->format('Y-m-d')
-            : null,
         // 🔥 OPTIONAL: summary status
         'status' => $finding->status,
 
@@ -157,8 +155,7 @@ public function show($id)
                 'root_cause' => $ap->root_cause ?? '',
                 'corrective_action' => $ap->corrective_action ?? '',
                 'status' => $ap->status,
-                'start_date' => $ap->start_date,
-                'target_date' => $ap->target_date,
+                'due_date' => $ap->due_date,
 
                 'comments' => $ap->comments
                     ->sortBy('created_at')
@@ -196,7 +193,6 @@ public function store(Request $request)
         'title' => 'required|string',
         'description' => 'nullable|string',
         'risk_rating' => 'nullable|string',
-        'start_date' => 'required|date',
 
         'departments' => 'nullable|array',
         'departments.*' => 'exists:departments,id',
@@ -223,11 +219,29 @@ public function store(Request $request)
         $companyCode = $project->company->code;
         $year = Carbon::now()->year;
 
-        $count = Finding::whereYear('created_at', $year)
-            ->whereHas('project', fn($q) => $q->where('company_id', $project->company_id))
-            ->count() + 1;
+        $companyCode = $project->company->code;
+        $year = now()->year;
 
-        $sequence = str_pad($count, 3, '0', STR_PAD_LEFT);
+        $sequenceRow = FindingSequence::lockForUpdate()
+            ->firstOrCreate(
+                [
+                    'company_code' => $companyCode,
+                    'year' => $year
+                ],
+                [
+                    'last_number' => 0
+                ]
+            );
+
+        $sequenceRow->increment('last_number');
+
+        $sequence = str_pad(
+            $sequenceRow->fresh()->last_number,
+            3,
+            '0',
+            STR_PAD_LEFT
+        );
+        
         $findingCode = "FND-{$companyCode}-{$year}-{$sequence}";
 
         // ===============================
@@ -243,7 +257,6 @@ public function store(Request $request)
             'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
                 ? 'Significant' : 'Moderate',
             
-            'start_date' => $request->start_date,
             'created_by' => auth()->id() ?? 1,
             'status' => 'open'
         ]);
@@ -269,8 +282,7 @@ public function store(Request $request)
                             'finding_department_id' => $fd->id,
                             'root_cause' => $ap['root_cause'] ?? '',
                             'corrective_action' => $ap['corrective_action'],
-                            'start_date' => $ap['start_date'] ?? null,
-                            'target_date' => $ap['target_date'] ?? null,
+                            'due_date' => $ap['due_date'] ?? null,
                             'status' => 'draft'
                         ]);
                     }
@@ -310,7 +322,6 @@ public function update(Request $request, $id)
         'title' => 'sometimes|string',
         'description' => 'nullable|string',
         'risk_rating' => 'sometimes|string',
-        'start_date' => 'nullable|date',
         'department_id' => 'nullable|exists:departments,id',
     ]);
 
@@ -327,11 +338,6 @@ public function update(Request $request, $id)
             in_array($riskRating, ['Extreme', 'Major'])
                 ? 'Significant'
                 : 'Moderate',
-
-        'start_date' =>
-            $request->filled('start_date')
-                ? $request->start_date
-                : $finding->start_date,
 
         'department_id' =>
             $request->filled('department_id')

@@ -20,8 +20,7 @@ return new class extends Migration
 
                     $table->text('corrective_action');
 
-                    $table->date('start_date')->nullable();
-                    $table->date('target_date')->nullable();
+                    $table->date('due_date')->nullable();
 
                     $table->enum('status',[
                         'draft', //open

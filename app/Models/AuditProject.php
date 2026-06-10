@@ -11,7 +11,7 @@ class AuditProject extends Model
         'project_code',
         'company_id',
         'project_name',
-        'start_date',
+        'release_date',
         'status',
         'created_by'
     ];

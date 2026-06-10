@@ -60,9 +60,6 @@ class AuditProjectController extends Controller
             'risk_rating' => $finding->risk_rating,
             'risk_category' => $finding->risk_category,
             'status' => $finding->status,
-            'start_date' => $finding->start_date
-            ? $finding->start_date->format('Y-m-d')
-            : null,
 
             'departments' => $finding->findingDepartments->map(function ($fd) {
                 return [
@@ -75,7 +72,7 @@ class AuditProjectController extends Controller
                         return [
                             'id' => $ap->id,
                             'status' => $ap->status,
-                            'target_date' => $ap->target_date,
+                            'due_date' => $ap->due_date,
                         ];
                     })
                 ];
@@ -120,8 +117,7 @@ class AuditProjectController extends Controller
             'company_id'   => 'required|exists:companies,id',
             'project_name' => 'required|string|max:255',
             'audit_type'   => 'nullable|string|max:255',
-            'start_date'   => 'nullable|date',
-            'end_date'     => 'nullable|date|after_or_equal:start_date',
+            'release_date'   => 'nullable|date',
         ]);
 
         // GET COMPANY
@@ -158,7 +154,7 @@ class AuditProjectController extends Controller
             'company_id'   => $request->company_id,
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
-            'start_date'   => $request->start_date,
+            'release_date'   => $request->release_date,
             'created_by'   => auth()->id() ?? 1
         ]);
 
@@ -176,7 +172,7 @@ class AuditProjectController extends Controller
         $request->validate([
             'project_name' => 'required|string|max:255',
             'audit_type'   => 'nullable|string|max:255',
-            'start_date'   => 'nullable|date',
+            'release_date'   => 'nullable|date',
         ]);
 
         $project = AuditProject::findOrFail($id);
@@ -193,7 +189,7 @@ class AuditProjectController extends Controller
         $project->update([
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
-            'start_date'   => $request->start_date,
+            'release_date'   => $request->release_date,
         ]);
 
         return response()->json([

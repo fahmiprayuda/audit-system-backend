@@ -23,7 +23,7 @@ class ActionPlanController extends Controller
             'root_cause' => 'nullable|string',
             'corrective_action' => 'required|string',
             'start_date' => 'nullable|date',
-            'target_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
             'status' => 'required|in:draft,submitted,need_revision,approved'
         ]);
 
@@ -50,7 +50,7 @@ class ActionPlanController extends Controller
                 'root_cause' => $plan['root_cause'] ?? null,
                 'corrective_action' => $plan['corrective_action'] ?? null,
                 'start_date' => $plan['start_date'] ?? null,
-                'target_date' => $plan['target_date'] ?? null,
+                'due_date' => $plan['due_date'] ?? null,
                 'status' => 'draft'
             ]);
 
