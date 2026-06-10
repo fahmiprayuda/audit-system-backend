@@ -166,7 +166,7 @@ class ActionPlanController extends Controller
 
             $receiverIds = \App\Models\User::whereIn(
                 'role',
-                ['admin', 'auditor']
+                ['manager', 'auditor']
             )
             ->where('id', '!=', $user->id)
             ->pluck('id');

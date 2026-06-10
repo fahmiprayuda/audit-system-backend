@@ -101,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware([
     'auth:sanctum',
-    'role:admin,auditor'
+    'role:manager,auditor'
     ])->group(function () {
 
         // Project
@@ -123,7 +123,7 @@ Route::middleware([
 
 Route::middleware([
     'auth:sanctum',
-    'role:admin,auditor'
+    'role:manager,auditor'
     ])->group(function () {
 
         Route::delete('/projects/{id}', [AuditProjectController::class, 'destroy']);
