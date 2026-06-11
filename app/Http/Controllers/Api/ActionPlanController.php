@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\AuditTrailService;
 use App\Services\StatusService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -112,6 +113,13 @@ class ActionPlanController extends Controller
             $ap->finding_department_id
         );
 
+        AuditTrailService::log(
+            'action_plan',
+            'submit',
+            $ap->id,
+            'Action plan submitted'
+        );
+
         return response()->json([
             'message' => 'Submitted'
         ]);
@@ -128,6 +136,13 @@ class ActionPlanController extends Controller
         ]);
 
         StatusService::sync($ap->finding_department_id);
+
+        AuditTrailService::log(
+            'action_plan',
+            'approve',
+            $ap->id,
+            'Action plan approved'
+        );
 
         return response()->json(['message' => 'Approved']);
     }
@@ -215,6 +230,13 @@ class ActionPlanController extends Controller
                     ]);
                 }
             }
+
+            AuditTrailService::log(
+                'comment',
+                'create',
+                $comment->id,
+                'Added comment'
+            );
 
             return response()->json([
                 'message' => 'Comment added'

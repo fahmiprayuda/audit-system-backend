@@ -13,8 +13,8 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'fahmi@manager.local'],
             [
-                'name' => 'Manager Audit',
-                'password' => Hash::make('manager123'),
+                'name' => 'Fahmi',
+                'password' => Hash::make('fahmi123'),
                 'role' => 'manager',
                 'department_id' => null,
             ]
@@ -23,8 +23,8 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'aulia@auditor.local'],
             [
-                'name' => 'Nur Aulia Rahmawati',
-                'password' => Hash::make('audit123'),
+                'name' => 'Aulia',
+                'password' => Hash::make('aulia123'),
                 'role' => 'auditor',
                 'department_id' => null,
             ]
@@ -34,7 +34,7 @@ class UserSeeder extends Seeder
             ['email' => 'shavazia@auditee.local'],
             [
                 'name' => 'Shavazia',
-                'password' => Hash::make('auditee123'),
+                'password' => Hash::make('shavazia123'),
                 'role' => 'auditee',
                 'department_id' => 3,
             ]
@@ -43,8 +43,8 @@ class UserSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'ghaisani@auditee.local'],
             [
-                'name' => 'Warehouse PIC',
-                'password' => Hash::make('auditee321'),
+                'name' => 'Ghaisani',
+                'password' => Hash::make('ghaisani123'),
                 'role' => 'auditee',
                 'department_id' => 1,
             ]

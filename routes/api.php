@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuditProjectController;
+use App\Http\Controllers\Api\AuditTrailController;
 use App\Http\Controllers\Api\FindingController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DashboardController;
@@ -112,6 +113,8 @@ Route::middleware([
     Route::apiResource('/users',UserController::class);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
     Route::post('/users/{id}/reset-password',[UserController::class, 'resetPassword']);
+
+    Route::get('/audit-trails',[AuditTrailController::class, 'index']);
 
 });
 

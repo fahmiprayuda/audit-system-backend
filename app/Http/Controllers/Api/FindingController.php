@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\AuditTrailService;
 use App\Services\StatusService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -289,6 +290,17 @@ public function store(Request $request)
                 }
 
                 StatusService::sync($fd->id);
+
+                // ===============================
+                // Audit Trail
+                // ===============================
+                AuditTrailService::log(
+                        'finding',
+                        'create',
+                        $finding->id,
+                        'Created finding'
+                    );
+                    
             }
         }
 
