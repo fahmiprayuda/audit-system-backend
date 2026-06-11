@@ -55,4 +55,35 @@ class UserController extends Controller
         return $user;
     }
 
+    public function destroy($id)
+    {
+        User::destroy($id);
+
+        return [
+            'message' => 'Deleted'
+        ];
+    }
+
+    public function resetPassword(
+        Request $request,
+        $id
+    )
+    {
+        $request->validate([
+            'password' => 'required|min:6'
+        ]);
+
+        $user = User::findOrFail($id);
+
+        $user->update([
+            'password' => bcrypt(
+                $request->password
+            )
+        ]);
+
+        return response()->json([
+            'message' => 'Password reset successfully'
+        ]);
+    }
+
 }

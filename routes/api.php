@@ -106,6 +106,8 @@ Route::middleware([
     ])->group(function () {
 
     Route::apiResource('/users',UserController::class);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::post('/users/{id}/reset-password',[UserController::class, 'resetPassword']);
 
 });
 
