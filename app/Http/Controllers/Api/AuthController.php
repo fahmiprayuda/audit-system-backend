@@ -38,4 +38,61 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
+
+    public function profile()
+    {
+        return auth()->user()
+            ->load('department');
+    }
+    
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        return response()->json([
+            'message' => 'Profile updated',
+            'data' => $user
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed',
+        ]);
+
+        $user = auth()->user();
+
+        if (
+            !Hash::check(
+                $request->current_password,
+                $user->password
+            )
+        ) {
+            return response()->json([
+                'message' => 'Current password incorrect'
+            ], 422);
+        }
+
+        $user->update([
+            'password' => bcrypt(
+                $request->new_password
+            )
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully'
+        ]);
+    }
 }

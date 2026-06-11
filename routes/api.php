@@ -98,6 +98,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications/unread-count',[NotificationController::class,'unreadCount']);
     Route::post('/notifications/{id}/read',[NotificationController::class,'markRead']);
 
+    Route::get('/profile',[AuthController::class,'profile']);
+    Route::put('/profile',[AuthController::class,'updateProfile']);
+    Route::post('/change-password',[AuthController::class, 'changePassword']);
+
 });
 
 Route::middleware([

@@ -22,7 +22,6 @@ class ActionPlanController extends Controller
             'finding_department_id' => 'required|exists:finding_departments,id',
             'root_cause' => 'nullable|string',
             'corrective_action' => 'required|string',
-            'start_date' => 'nullable|date',
             'due_date' => 'nullable|date',
             'status' => 'required|in:draft,submitted,need_revision,approved'
         ]);
@@ -49,7 +48,6 @@ class ActionPlanController extends Controller
                 'finding_department_id' => $plan['finding_department_id'],
                 'root_cause' => $plan['root_cause'] ?? null,
                 'corrective_action' => $plan['corrective_action'] ?? null,
-                'start_date' => $plan['start_date'] ?? null,
                 'due_date' => $plan['due_date'] ?? null,
                 'status' => 'draft'
             ]);
