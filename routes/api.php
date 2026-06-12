@@ -145,13 +145,14 @@ Route::middleware([
     'role:manager,auditor'
     ])->group(function () {
 
-        Route::delete('/projects/{id}', [AuditProjectController::class, 'destroy']);
+        Route::delete('/projects/{id}',[AuditProjectController::class, 'destroy']);
 
-        Route::delete('/findings/{id}', [FindingController::class, 'destroy']);
+        Route::delete('/findings/{id}',[FindingController::class, 'destroy']);
+        Route::delete('/finding-departments/{id}',[FindingDepartmentController::class, 'destroy']);
 
-        Route::delete('/finding-departments/{id}',
-            [FindingDepartmentController::class, 'destroy']
-        );
+        Route::get('/dashboard/executive-summary',[DashboardController::class, 'executiveSummary']);
+        Route::get('/dashboard/top-overdue-findings',[DashboardController::class, 'topOverdueFindings']);
+    
     });
 
 Route::middleware([
