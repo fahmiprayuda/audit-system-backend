@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+
 use Carbon\Carbon;
 use App\Models\AuditProject;
 use App\Models\Finding;
@@ -247,8 +249,8 @@ class DashboardController extends Controller
                 $q->whereBetween(
                     'release_date',
                     [
-                        $request->start_date,
-                        $request->end_date
+                        $request->filled('start_date') &&
+                        $request->filled('end_date'),
                     ]
                 )
             )
@@ -272,27 +274,42 @@ class DashboardController extends Controller
             ->count();
 
         $openFindings =
-            Finding::whereIn(
-                'audit_project_id',
+            Finding::query()
+
+            ->join(
+                'finding_departments',
+                'findings.id',
+                '=',
+                'finding_departments.finding_id'
+            )
+
+            ->join(
+                'action_plans',
+                'finding_departments.id',
+                '=',
+                'action_plans.finding_department_id'
+            )
+
+            ->whereIn(
+                'findings.audit_project_id',
                 $projectIds
             )
-            ->whereHas(
-                'actionPlans',
-                function ($q) use ($today) {
 
-                    $q->whereDate(
-                        'due_date',
-                        '<',
-                        $today
-                    )
-                    ->where(
-                        'status',
-                        '!=',
-                        'approved'
-                    );
-                }
+            ->whereDate(
+                'action_plans.due_date',
+                '<',
+                $today
             )
-            ->count();
+
+            ->where(
+                'action_plans.status',
+                '!=',
+                'approved'
+            )
+
+            ->distinct('findings.id')
+
+            ->count('findings.id');
 
         $openActions =
             ActionPlan::whereHas(
@@ -442,9 +459,7 @@ class DashboardController extends Controller
                 'departments.name'
             )
 
-            ->orderByDesc(
-                'total'
-            )
+            ->orderByDesc('overdue_findings')
 
             ->get();
 
@@ -545,8 +560,10 @@ class DashboardController extends Controller
             ->map(function ($item) {
 
                 $item->days_overdue =
-                    now()->diffInDays(
-                        $item->oldest_due_date
+                    Carbon::parse($item->oldest_due_date)
+                    ->startOfDay()
+                    ->diffInDays(
+                        now()->startOfDay()
                     );
 
                 return $item;

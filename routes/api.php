@@ -103,6 +103,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile',[AuthController::class,'updateProfile']);
     Route::post('/change-password',[AuthController::class, 'changePassword']);
 
+
+    
+
 });
 
 Route::middleware([
@@ -152,6 +155,8 @@ Route::middleware([
 
         Route::get('/dashboard/executive-summary',[DashboardController::class, 'executiveSummary']);
         Route::get('/dashboard/top-overdue-findings',[DashboardController::class, 'topOverdueFindings']);
+        Route::get('/dashboard/overdue-findings-by-department',[DashboardController::class, 'overdueFindingsByDepartment']);
+        
     
     });
 
