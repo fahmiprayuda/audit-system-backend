@@ -587,4 +587,288 @@ class DashboardController extends Controller
         return $this->actionPlans()->max('due_date');
     }
 
+    public function findingDetails($id)
+    {
+        $finding = Finding::with([
+
+            'project',
+
+            'findingDepartments.department',
+
+            'findingDepartments.actionPlans' => function ($q) {
+                $q->where('status', '!=', 'approved')
+                ->orderBy('due_date');
+            }
+
+        ])->findOrFail($id);
+
+        $actions = collect();
+
+        foreach ($finding->findingDepartments as $fd) {
+
+            foreach ($fd->actionPlans as $ap) {
+
+                $actions->push([
+
+                    'id' => $ap->id,
+
+                    'department' =>
+                        $fd->department?->name,
+
+                    'root_cause' =>
+                        $ap->root_cause,
+
+                    'corrective_action' =>
+                        $ap->corrective_action,
+
+                    'due_date' =>
+                        $ap->due_date,
+
+                    'status' =>
+                        $ap->status,
+
+                    'days_overdue' => (
+                        $ap->status !== 'approved'
+                        && $ap->due_date
+                        && $ap->due_date->isPast()
+                    )
+                    ? abs(
+                        now()->startOfDay()->diffInDays(
+                            $ap->due_date->startOfDay(),
+                            false
+                        )
+                    )
+                    : 0
+
+                ]);
+            }
+        }
+
+        return response()->json([
+
+            'id' =>
+                $finding->id,
+
+            'finding_code' =>
+                $finding->finding_code,
+
+            'title' =>
+                $finding->title,
+
+            'risk_rating' =>
+                $finding->risk_rating,
+
+            'status' =>
+                $finding->status,
+
+            'project' =>
+                $finding->project?->project_name,
+
+            'actions' =>
+                $actions->values()
+
+        ]);
+    }
+
+    public function projectPortfolio(Request $request)
+    {
+        $data = AuditProject::query()
+
+            ->withCount('findings')
+
+            ->withCount([
+                'findings as open_findings' => function ($q) {
+                    $q->where('status', 'open');
+                },
+
+                'findings as closed_findings' => function ($q) {
+                    $q->where('status', 'closed');
+                },
+            ])
+
+            ->withCount([
+
+                'findings as significant_findings' => function ($q) {
+
+                    $q->whereIn(
+                        'risk_category',
+                        ['Significant']
+                    );
+
+                },
+
+                'findings as moderate_findings' => function ($q) {
+
+                    $q->where(
+                        'risk_category',
+                        'Moderate'
+                    );
+
+                }
+
+            ])
+
+            ->when(
+                $request->start_date &&
+                $request->end_date,
+
+                function ($q) use ($request) {
+
+                    $q->whereBetween(
+                        'release_date',
+                        [
+                            $request->start_date,
+                            $request->end_date
+                        ]
+                    );
+
+                }
+            )
+
+            ->latest('release_date')
+
+            ->get()
+
+            ->map(function ($project) {
+
+                $overdueActions =
+                    DB::table('action_plans')
+
+                    ->join(
+                        'finding_departments',
+                        'action_plans.finding_department_id',
+                        '=',
+                        'finding_departments.id'
+                    )
+
+                    ->join(
+                        'findings',
+                        'finding_departments.finding_id',
+                        '=',
+                        'findings.id'
+                    )
+
+                    ->where(
+                        'findings.audit_project_id',
+                        $project->id
+                    )
+
+                    ->whereDate(
+                        'action_plans.due_date',
+                        '<',
+                        today()
+                    )
+
+                    ->where(
+                        'action_plans.status',
+                        '!=',
+                        'approved'
+                    )
+
+                    ->count();
+
+                return [
+
+                    'id' =>
+                        $project->id,
+
+                    'project_code' =>
+                        $project->project_code,
+
+                    'project_name' =>
+                        $project->project_name,
+
+                    'release_date' =>
+                        $project->release_date,
+
+                    'total_findings' =>
+                        $project->findings_count,
+
+                    'significant_findings' =>
+                    $project->significant_findings,
+                    
+                    'moderate_findings' =>
+                        $project->moderate_findings,
+
+                    'open_findings' =>
+                        $project->open_findings,
+
+                    'closed_findings' =>
+                        $project->closed_findings,
+
+                    'overdue_actions' =>
+                        $overdueActions,
+
+                    'completion_percent' =>
+                        $project->findings_count > 0
+                            ? round(
+                                (
+                                    $project->closed_findings
+                                    /
+                                    $project->findings_count
+                                ) * 100
+                            )
+                            : 0
+                ];
+            });
+
+        return response()->json($data);
+    }
+
+    public function projectDetails($id)
+    {
+        $project = AuditProject::with([
+            'findings'
+        ])->findOrFail($id);
+
+        return response()->json([
+
+            'id' =>
+                $project->id,
+
+            'project_code' =>
+                $project->project_code,
+
+            'project_name' =>
+                $project->project_name,
+
+            'release_date' =>
+                $project->release_date,
+
+            'status' =>
+                $project->status,
+
+            'findings' =>
+
+                $project->findings
+
+                ->map(function ($finding) {
+
+                    return [
+
+                        'id' =>
+                            $finding->id,
+
+                        'finding_code' =>
+                            $finding->finding_code,
+
+                        'title' =>
+                            $finding->title,
+
+                        'risk_rating' =>
+                            $finding->risk_rating,
+
+                        'risk_category' =>
+                            $finding->risk_category,
+
+                        'status' =>
+                            $finding->status,
+
+                    ];
+
+                })
+
+        ]);
+    }
+
 }

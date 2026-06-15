@@ -156,7 +156,9 @@ Route::middleware([
         Route::get('/dashboard/executive-summary',[DashboardController::class, 'executiveSummary']);
         Route::get('/dashboard/top-overdue-findings',[DashboardController::class, 'topOverdueFindings']);
         Route::get('/dashboard/overdue-findings-by-department',[DashboardController::class, 'overdueFindingsByDepartment']);
-        
+        Route::get('/dashboard/findings/{id}/details',[DashboardController::class, 'findingDetails']);
+        Route::get('/dashboard/project-portfolio',[DashboardController::class, 'projectPortfolio']);
+        Route::get('/dashboard/projects/{id}/details',[DashboardController::class, 'projectDetails']);
     
     });
 
