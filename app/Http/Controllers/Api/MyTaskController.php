@@ -37,10 +37,9 @@ class MyTaskController extends Controller
 
             'summary' => [
                 'total' => $tasks->count(),
-                'draft' => $tasks->where('status', 'draft')->count(),
+                'need_further_review' => $tasks->where('status', 'need_further_review')->count(),
                 'submitted' => $tasks->where('status', 'submitted')->count(),
-                'need_revision' => $tasks->where('status', 'need_revision')->count(),
-                'approved' => $tasks->where('status', 'approved')->count(),
+                'closed' => $tasks->where('status', 'closed')->count(),
             ],
 
             'tasks' => $tasks->map(function ($task) {

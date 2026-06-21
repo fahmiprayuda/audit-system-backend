@@ -10,42 +10,43 @@ return new class extends Migration
             {
                 Schema::create('action_plans', function (Blueprint $table) {
 
-                    $table->id();
+                        $table->id();
 
-                    $table->foreignId('finding_department_id')
-                        ->constrained()
-                        ->cascadeOnDelete();
+                        $table->foreignId('finding_department_id')
+                            ->constrained()
+                            ->cascadeOnDelete();
 
-                    $table->text('root_cause')->nullable();
+                        $table->text('root_cause')->nullable();
 
-                    $table->text('corrective_action');
+                        $table->text('corrective_action');
 
-                    $table->date('due_date')->nullable();
+                        $table->date('due_date')->nullable();
 
-                    $table->enum('status',[
-                        'draft', //open
-                        'submitted', //NFR
-                        'need_revision', //NFR
-                        'approved' //closed
-                    ])->default('draft');
+                        $table->enum('status', [
+                            'need_further_review',
+                            'open',
+                            'closed'
+                        ])->default('need_further_review');
 
-                    // Audit trail
+                        $table->json('flags')->nullable();
 
-                    $table->timestamp('submitted_at')->nullable();
-                    $table->timestamp('approved_at')->nullable();
+                        // Audit trail
 
-                    $table->foreignId('submitted_by')
-                        ->nullable()
-                        ->constrained('users');
+                        $table->timestamp('submitted_at')->nullable();
+                        $table->timestamp('closed_at')->nullable();
 
-                    $table->foreignId('approved_by')
-                        ->nullable()
-                        ->constrained('users')
-                        ->nullOnDelete();
+                        $table->foreignId('submitted_by')
+                            ->nullable()
+                            ->constrained('users');
 
-                    $table->timestamps();
-        });
-    }
+                        $table->foreignId('closed_by')
+                            ->nullable()
+                            ->constrained('users')
+                            ->nullOnDelete();
+
+                        $table->timestamps();
+            });
+        }
 
     public function down(): void
     {

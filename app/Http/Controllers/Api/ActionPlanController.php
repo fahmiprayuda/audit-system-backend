@@ -24,8 +24,10 @@ class ActionPlanController extends Controller
             'root_cause' => 'nullable|string',
             'corrective_action' => 'required|string',
             'due_date' => 'nullable|date',
-            'status' => 'required|in:draft,submitted,need_revision,approved'
         ]);
+
+        $validated['status'] =
+            'need_further_review';
 
         $ap = ActionPlan::create($validated);
 
@@ -50,7 +52,7 @@ class ActionPlanController extends Controller
                 'root_cause' => $plan['root_cause'] ?? null,
                 'corrective_action' => $plan['corrective_action'] ?? null,
                 'due_date' => $plan['due_date'] ?? null,
-                'status' => 'draft'
+                'status' => 'need_further_review'
             ]);
 
             StatusService::sync($ap->finding_department_id);
@@ -71,19 +73,15 @@ class ActionPlanController extends Controller
             ], 400);
         }
 
-        $ap = ActionPlan::findOrFail($id);
-
-        if (!$ap->canTransitionTo('submitted')) {
+        if ($ap->status === 'closed') {
             return response()->json([
-                'message' => 'Invalid status transition'
+                'message' => 'Action Plan already closed'
             ], 400);
         }
 
-        $ap->update([
-            'status' => 'submitted',
-            'submitted_at' => now(),
-            'submitted_by' => auth()->id()
-        ]);
+        $ap = ActionPlan::findOrFail($id);
+        $ap->addFlag('submitted');
+        $ap->removeFlag('revision_required');
 
         ActionPlanComment::create([
             'action_plan_id' => $ap->id,
@@ -125,26 +123,33 @@ class ActionPlanController extends Controller
         ]);
     }
 
-    public function approve($id)
+    public function close($id)
     {
         $ap = ActionPlan::findOrFail($id);
 
+        if ($ap->status === 'closed') {
+            return response()->json([
+                'message' => 'Action Plan already closed'
+            ], 400);
+        }
+
         $ap->update([
-            'status' => 'approved',
-            'approved_at' => now(),
-            'approved_by' => auth()->id()
+            'status' => 'closed',
+            'flags' => null,
+            'closed_at' => now(),
+            'closed_by' => auth()->id()
         ]);
 
         StatusService::sync($ap->finding_department_id);
 
         AuditTrailService::log(
             'action_plan',
-            'approve',
+            'close',
             $ap->id,
-            'Action plan approved'
+            'Action plan closed'
         );
 
-        return response()->json(['message' => 'Approved']);
+        return response()->json(['message' => 'Closed']);
     }
 
     public function comment(Request $request, $id)
@@ -156,7 +161,7 @@ class ActionPlanController extends Controller
 
         $ap = ActionPlan::findOrFail($id);
 
-         if ($ap->status === 'approved') {
+         if ($ap->status === 'closed') {
                 return response()->json([
                     'message' => 'Action Plan already closed'
                 ], 403);
@@ -170,6 +175,22 @@ class ActionPlanController extends Controller
         ]);
 
         $user = auth()->user();
+
+        if ($user->role === 'auditee') {
+
+            $ap->addFlag('submitted');
+            $ap->removeFlag('revision_required');
+
+        } elseif (
+            in_array(
+                $user->role,
+                ['auditor', 'manager']
+            )
+        ) {
+
+            $ap->addFlag('revision_required');
+            $ap->removeFlag('submitted');
+        }
 
         $findingId =
             $ap->findingDepartment
@@ -241,6 +262,36 @@ class ActionPlanController extends Controller
             return response()->json([
                 'message' => 'Comment added'
             ]);
-        }
+    }    
+        
+    public function requestRevision(Request $request, $id)
+    {
 
-    }
+        $request->validate([
+            'message' => 'required|string'
+        ]);
+
+        $ap = ActionPlan::findOrFail($id);
+
+        $ap->addFlag('revision_required');
+        $ap->removeFlag('submitted');
+
+        ActionPlanComment::create([
+            'action_plan_id' => $ap->id,
+            'role' => auth()->user()->role,
+            'message' => $request->message,
+            'created_by' => auth()->id(),
+        ]);
+
+        AuditTrailService::log(
+            'action_plan',
+            'revision_requested',
+            $ap->id,
+            'Revision requested'
+        );
+
+        return response()->json([
+            'message' => 'Revision requested'
+        ]);
+    }    
+}

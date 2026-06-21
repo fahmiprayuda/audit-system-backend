@@ -9,7 +9,6 @@ class FindingDepartment extends Model
     protected $fillable = [
         'finding_id',
         'department_id',
-        'status'
     ];
 
 

@@ -40,14 +40,14 @@ class StatusService
 
         if ($actionPlans->count() === 0) {
 
-            $finding->status = 'open';
+            $finding->status = 'need_further_review';
 
         } else {
 
             $hasOverdue = $actionPlans->contains(function ($ap) {
 
                 return
-                    $ap->status !== 'approved'
+                    $ap->status !== 'closed'
                     &&
                     $ap->due_date
                     &&
@@ -55,15 +55,15 @@ class StatusService
 
             });
 
-            $allApproved = $actionPlans->every(
-                fn($ap) => $ap->status === 'approved'
+            $allClosed = $actionPlans->every(
+                fn($ap) => $ap->status === 'closed'
             );
 
             if ($hasOverdue) {
 
-                $finding->status = 'open';
+                $finding->status = 'need_further_review';
 
-            } elseif ($allApproved) {
+            } elseif ($allClosed) {
 
                 $finding->status = 'closed';
 
@@ -92,7 +92,7 @@ class StatusService
         // Belum ada finding
         if ($project->findings->count() === 0) {
 
-            $project->status = 'open';
+            $project->status = 'need_further_review';
 
         } else {
 

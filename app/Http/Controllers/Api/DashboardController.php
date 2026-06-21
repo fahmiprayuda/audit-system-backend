@@ -85,10 +85,10 @@ class DashboardController extends Controller
             "action_total" =>
                 ActionPlan::count(),
 
-            "draft" =>
+            "need_further_review" =>
                 ActionPlan::where(
                     "status",
-                    "draft"
+                    "need_further_review"
                 )->count(),
 
             "submitted" =>
@@ -97,16 +97,10 @@ class DashboardController extends Controller
                     "submitted"
                 )->count(),
 
-            "need_revision" =>
+            "closed" =>
                 ActionPlan::where(
                     "status",
-                    "need_revision"
-                )->count(),
-
-            "approved" =>
-                ActionPlan::where(
-                    "status",
-                    "approved"
+                    "closed"
                 )->count(),
 
             "overdue" =>
@@ -118,7 +112,7 @@ class DashboardController extends Controller
                 ->where(
                     "status",
                     "!=",
-                    "approved"
+                    "closed"
                 )
                 ->count(),
         ]);
@@ -188,7 +182,7 @@ class DashboardController extends Controller
             ->where(
                 "status",
                 "!=",
-                "approved"
+                "closed"
             )
             ->orderBy(
                 "due_date"
@@ -222,7 +216,7 @@ class DashboardController extends Controller
             ->where(
                 "action_plans.status",
                 "!=",
-                "approved"
+                "closed"
             )
             ->select(
                 "departments.name",
@@ -304,7 +298,7 @@ class DashboardController extends Controller
             ->where(
                 'action_plans.status',
                 '!=',
-                'approved'
+                'closed'
             )
 
             ->distinct('findings.id')
@@ -330,7 +324,7 @@ class DashboardController extends Controller
             ->where(
                 'status',
                 '!=',
-                'approved'
+                'closed'
             )
             ->count();
 
@@ -355,7 +349,7 @@ class DashboardController extends Controller
             ->where(
                 'status',
                 '!=',
-                'approved'
+                'closed'
             )
             ->count();
 
@@ -440,7 +434,7 @@ class DashboardController extends Controller
             ->where(
                 'action_plans.status',
                 '!=',
-                'approved'
+                'closed'
             )
 
             ->select(
@@ -528,7 +522,7 @@ class DashboardController extends Controller
             ->where(
                 'action_plans.status',
                 '!=',
-                'approved'
+                'closed'
             )
 
             ->select(
@@ -596,7 +590,7 @@ class DashboardController extends Controller
             'findingDepartments.department',
 
             'findingDepartments.actionPlans' => function ($q) {
-                $q->where('status', '!=', 'approved')
+                $q->where('status', '!=', 'closed')
                 ->orderBy('due_date');
             }
 
@@ -607,6 +601,12 @@ class DashboardController extends Controller
         foreach ($finding->findingDepartments as $fd) {
 
             foreach ($fd->actionPlans as $ap) {
+
+                if (
+                    $ap->status !== 'closed'
+                    && $ap->due_date
+                    && $ap->due_date->isPast()
+                )
 
                 $actions->push([
 
@@ -628,7 +628,7 @@ class DashboardController extends Controller
                         $ap->status,
 
                     'days_overdue' => (
-                        $ap->status !== 'approved'
+                        $ap->status !== 'closed'
                         && $ap->due_date
                         && $ap->due_date->isPast()
                     )
@@ -683,6 +683,10 @@ class DashboardController extends Controller
 
                 'findings as closed_findings' => function ($q) {
                     $q->where('status', 'closed');
+                },
+
+                'findings as nfr_findings' => function ($q) {
+                    $q->where('status', 'need_further_review');
                 },
             ])
 
@@ -762,7 +766,7 @@ class DashboardController extends Controller
                     ->where(
                         'action_plans.status',
                         '!=',
-                        'approved'
+                        'closed'
                     )
 
                     ->count();
@@ -795,6 +799,9 @@ class DashboardController extends Controller
 
                     'closed_findings' =>
                         $project->closed_findings,
+                    
+                    'nfr_findings' =>
+                        $project->nfr_findings,
 
                     'overdue_actions' =>
                         $overdueActions,

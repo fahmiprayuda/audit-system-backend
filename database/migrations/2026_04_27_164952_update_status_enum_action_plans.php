@@ -12,16 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('action_plans', function (Blueprint $table) {
+
             $table->enum('status', [
-                'draft',
+                'need_further_review',
+                'open',
+                'closed',
+            ])->default('need_further_review')->change();
+
+            $table->enum('flag', [
                 'submitted',
-                'approved',
-                'in_progress',
-                'done',
-                'verified',
-                'need_revision',
-                'closed'
-            ])->change();
+                'revision_required'
+            ])->nullable();
         });
     }
 

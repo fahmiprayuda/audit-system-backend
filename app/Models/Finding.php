@@ -45,12 +45,12 @@ class Finding extends Model
 
         } else {
 
-            $allApproved = $actionPlans
-                ->where('status', '!=', 'approved')
+            $allClosed = $actionPlans
+                ->where('status', '!=', 'closed')
                 ->doesntExist();
 
             $this->update([
-                'status' => $allApproved
+                'status' => $allClosed
                     ? 'closed'
                     : 'need_further_review'
             ]);

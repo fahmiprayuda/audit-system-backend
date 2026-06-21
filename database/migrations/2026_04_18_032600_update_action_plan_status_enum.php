@@ -15,15 +15,14 @@ return new class extends Migration
             ALTER TABLE action_plans 
             MODIFY status ENUM(
                 'open',
-                'need_review',
                 'completed',
-                'draft',
+                'need_further_review',
                 'submitted',
-                'approved',
+                'closed',
                 'in_progress',
                 'done',
                 'verified'
-            ) DEFAULT 'open'
+            ) DEFAULT 'need_further_review';
         ");
     }
 

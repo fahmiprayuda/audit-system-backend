@@ -18,10 +18,9 @@ class ActionPlanSeeder extends Seeder
           $user = User::first();
 
             $status = collect([
-                'draft',
+                'need_further_review',
                 'submitted',
-                'need_revision',
-                'approved'
+                'closed'
             ])->random();
 
             ActionPlan::create([
@@ -37,21 +36,19 @@ class ActionPlanSeeder extends Seeder
 
                 'submitted_at' => in_array($status, [
                     'submitted',
-                    'need_revision',
-                    'approved'
+                    'closed'
                 ]) ? now()->subDays(rand(1,5)) : null,
 
-                'approved_at' => $status === 'approved'
+                'closed_at' => $status === 'closed'
                     ? now()
                     : null,
 
                 'submitted_by' => in_array($status, [
                     'submitted',
-                    'need_revision',
-                    'approved'
+                    'closed'
                 ]) ? $user->id : null,
 
-                'approved_by' => $status === 'approved'
+                'closed_by' => $status === 'closed'
                     ? $user->id
                     : null,
             ]);

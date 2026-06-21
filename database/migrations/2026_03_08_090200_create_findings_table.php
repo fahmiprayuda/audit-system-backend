@@ -37,7 +37,7 @@ return new class extends Migration
                 'open',
                 'need_further_review',
                 'closed'
-            ])->default('open');
+            ])->default('need_further_review');
 
             $table->foreignId('created_by')
                 ->constrained('users');

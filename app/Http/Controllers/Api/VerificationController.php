@@ -13,7 +13,7 @@ class VerificationController extends Controller
 {
     $request->validate([
         'action_plan_id' => 'required|exists:action_plans,id',
-        'status' => 'required|in:approved,rejected,revision',
+        'status' => 'required|in:closed,rejected,revision',
         'verification_note' => 'nullable|string'
     ]);
 
@@ -28,16 +28,12 @@ class VerificationController extends Controller
     // update status action plan
     $actionPlan = ActionPlan::find($request->action_plan_id);
 
-        if ($request->status === 'approved') {
+        if ($request->status === 'closed') {
             $actionPlan->status = 'completed';
         }
 
-        if ($request->status === 'revision') {
-            $actionPlan->status = 'need_review';
-        }
-
         if ($request->status === 'rejected') {
-            $actionPlan->status = 'open';
+            $actionPlan->status = 'need_further_review';
         }
 
         $actionPlan->save();

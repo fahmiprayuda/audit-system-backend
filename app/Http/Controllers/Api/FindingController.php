@@ -39,7 +39,6 @@ class FindingController extends Controller
 /* =====================================================
 GET ALL FINDINGS
 ===================================================== */
-
 public function index(Request $request)
 {
     $query = Finding::with([
@@ -91,7 +90,7 @@ public function index(Request $request)
                 ->contains(fn($ap) =>
                     $ap->due_date &&
                     Carbon::parse($ap->due_date)->isPast() &&
-                    $ap->status !== 'approved'
+                    $ap->status !== 'closed'
                 );
 
         $f->departments = $f->findingDepartments->map(function ($fd) {
@@ -103,8 +102,21 @@ public function index(Request $request)
                 'action_plans' => $fd->actionPlans->map(function ($ap) {
                     return [
                         'id' => $ap->id,
+                        'root_cause' => $ap->root_cause,
+                        'corrective_action' => $ap->corrective_action,
                         'status' => $ap->status,
-                        'due_date' => $ap->due_date
+                        'due_date' => $ap->due_date,
+
+                        'flags' => array_merge(
+                            $ap->flags ?? [],
+                            (
+                                $ap->due_date &&
+                                $ap->due_date->isPast() &&
+                                $ap->status !== 'closed'
+                            )
+                                ? ['overdue']
+                                : []
+                        )
                     ];
                 })
             ];
@@ -157,6 +169,17 @@ public function show($id)
                 'corrective_action' => $ap->corrective_action ?? '',
                 'status' => $ap->status,
                 'due_date' => $ap->due_date,
+
+                'flags' => array_merge(
+                            $ap->flags ?? [],
+                            (
+                                $ap->due_date &&
+                                $ap->due_date->isPast() &&
+                                $ap->status !== 'closed'
+                            )
+                                ? ['overdue']
+                                : []
+                        ),
 
                 'comments' => $ap->comments
                     ->sortBy('created_at')
@@ -271,7 +294,7 @@ public function store(Request $request)
                 $fd = FindingDepartment::create([
                     'finding_id' => $finding->id,
                     'department_id' => $deptId,
-                    'status' => 'open'
+                    'status' => 'need_further_review'
                 ]);
 
                 if ($request->action_plans) {
@@ -284,13 +307,16 @@ public function store(Request $request)
                             'root_cause' => $ap['root_cause'] ?? '',
                             'corrective_action' => $ap['corrective_action'],
                             'due_date' => $ap['due_date'] ?? null,
-                            'status' => 'draft'
+                            'status' => 'need_further_review'
                         ]);
                     }
                 }
 
                 StatusService::sync($fd->id);
 
+                // $fd->refresh();
+
+                // dd($fd->status);
                 // ===============================
                 // Audit Trail
                 // ===============================
@@ -323,11 +349,9 @@ public function store(Request $request)
     }
 }
 
-
 /* =====================================================
 UPDATE FINDING (GLOBAL DATA ONLY)
 ===================================================== */
-
 public function update(Request $request, $id)
 {
     $request->validate([
@@ -366,11 +390,9 @@ public function update(Request $request, $id)
     ]);
 }
 
-
 /* =====================================================
 DELETE
 ===================================================== */
-
 public function destroy($id)
 {
     $finding = Finding::findOrFail($id);

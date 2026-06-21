@@ -58,7 +58,7 @@ Route::post('/findings/add-department', [FindingController::class, 'addDepartmen
 Route::post('/action-plans', [ActionPlanController::class, 'store']);
 Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 Route::post('/action-plans/{id}/submit', [ActionPlanController::class, 'submit']);
-Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
+Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
 
 Route::post('/verifications', [VerificationController::class, 'store']);
 
@@ -140,7 +140,7 @@ Route::middleware([
         Route::post('/action-plans', [ActionPlanController::class, 'store']);
         Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 
-        Route::post('/action-plans/{id}/approve', [ActionPlanController::class, 'approve']);
+        Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
     });
 
 Route::middleware([

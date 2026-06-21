@@ -8,6 +8,7 @@ class ActionPlan extends Model
 {
     protected $casts = [
         'due_date' => 'date',
+        'flags' => 'array',
     ];
 
     protected $fillable = [
@@ -16,6 +17,7 @@ class ActionPlan extends Model
         'corrective_action',
         'due_date',
         'status',
+        'flags',
     ];
 
     public function findingDepartment()
@@ -28,42 +30,67 @@ class ActionPlan extends Model
         return $this->hasMany(Verification::class);
     }
 
-    public function canTransitionTo($newStatus)
-    {
-        $flow = [
-
-            'draft' => [
-                'submitted'
-            ],
-
-            'submitted' => [
-                'approved',
-                'need_revision'
-            ],
-
-            'need_revision' => [
-                'submitted'
-            ],
-
-            'approved' => []
-
-        ];
-
-        return in_array(
-            $newStatus,
-            $flow[$this->status] ?? []
-        );
-    }
-
     public function getIsOverdueAttribute()
     {
         return $this->due_date
             && $this->due_date < now()->toDateString()
-            && $this->status !== 'approved';
+            && $this->status !== 'closed';
     }
 
     public function comments()
     {
         return $this->hasMany(ActionPlanComment::class);
+    }
+
+    public function isOverdue()
+    {
+        return
+            $this->status !== 'closed'
+            &&
+            $this->due_date?->isPast();
+    }
+
+    public function hasFlag($flag)
+    {
+        return in_array(
+            $flag,
+            $this->flags ?? []
+        );
+    }
+    public function isSubmitted()
+    {
+        return $this->hasFlag('submitted');
+    }
+
+    public function needsRevision()
+    {
+        return $this->hasFlag('revision_required');
+    }
+
+    public function addFlag($flag)
+    {
+        $flags = $this->flags ?? [];
+
+        if (!in_array($flag, $flags)) {
+            $flags[] = $flag;
+
+            $this->update([
+                'flags' => $flags
+            ]);
+        }
+    }
+
+    public function removeFlag($flag)
+    {
+        $flags = collect(
+            $this->flags ?? []
+        )
+        ->reject(fn($f) => $f === $flag)
+        ->values()
+        ->toArray();
+
+        $this->update([
+            'flags' => $flags
+        ]);
     }
 }

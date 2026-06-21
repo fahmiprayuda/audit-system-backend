@@ -23,7 +23,7 @@ public function store(Request $request)
             'department_id' => $request->department_id
         ],
         [
-            'status' => 'open' // 🔥 default
+            'status' => 'need_further_review' // 🔥 default
         ]
     );
 
@@ -35,7 +35,7 @@ public function store(Request $request)
 public function updateStatus(Request $request, $id)
 {
     $request->validate([
-        'status' => 'required|in:open,need_review,closed'
+        'status' => 'required|in:open,need_further_review,closed'
     ]);
 
     $fd = FindingDepartment::findOrFail($id);

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('finding_departments', function (Blueprint $table) {
-            $table->string('status')->default('open')->after('department_id');
+            $table->string('status')->default('need_further_review')->after('department_id');
         });
     }
 
