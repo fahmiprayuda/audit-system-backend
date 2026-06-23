@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
+use App\Models\ActionPlanExtension;
 use App\Models\actionPlanCommentAttachment;
 use App\Services\NotificationService;
 
@@ -294,4 +295,89 @@ class ActionPlanController extends Controller
             'message' => 'Revision requested'
         ]);
     }    
+
+    public function extend(Request $request, $id)
+    {
+        $request->validate([
+            'new_due_date' => 'required|date',
+            'status_after_extension' =>
+                'required|in:open,need_further_review,closed',
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        $ap = ActionPlan::findOrFail($id);
+
+        // Simpan history extension
+        ActionPlanExtension::create([
+            'action_plan_id' => $ap->id,
+            'old_due_date' => $ap->due_date,
+            'new_due_date' => $request->new_due_date,
+            'status_after_extension'
+                => $request->status_after_extension,
+            'reason' => $request->reason,
+            'extended_by' => auth()->id(),
+        ]);
+
+        $flags = $ap->flags ?? [];
+
+        // overdue otomatis hilang
+        $flags = array_values(
+            array_diff($flags, ['overdue'])
+        );
+
+        // Jika auditor pilih Need Further Review
+        if (
+            $request->status_after_extension
+            === 'need_further_review'
+        ) {
+
+            if (
+                !in_array(
+                    'on_site_validation',
+                    $flags
+                )
+            ) {
+                $flags[] = 'on_site_validation';
+            }
+
+        } else {
+
+            // selain NFR hapus flag validasi lapangan
+            $flags = array_values(
+                array_diff(
+                    $flags,
+                    ['on_site_validation']
+                )
+            );
+        }
+
+        // Jika langsung Closed
+        if (
+            $request->status_after_extension
+            === 'closed'
+        ) {
+            $flags = [];
+        }
+
+        $ap->update([
+            'due_date' => $request->new_due_date,
+            'status' => $request->status_after_extension,
+            'flags' => $flags,
+        ]);
+
+        StatusService::sync(
+            $ap->finding_department_id
+        );
+
+        AuditTrailService::log(
+            'action_plan',
+            'extend',
+            $ap->id,
+            "Extended due date from {$ap->getOriginal('due_date')} to {$request->new_due_date}"
+        );
+
+        return response()->json([
+            'message' => 'Action Plan extended successfully'
+        ]);
+    }
 }

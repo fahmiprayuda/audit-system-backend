@@ -38,38 +38,49 @@ class StatusService
             $finding->findingDepartments
                 ->flatMap->actionPlans;
 
-        if ($actionPlans->count() === 0) {
+        if ($actionPlans->isEmpty()) {
 
-            $finding->status = 'need_further_review';
+            $finding->status =
+                'need_further_review';
 
         } else {
 
-            $hasOverdue = $actionPlans->contains(function ($ap) {
+            foreach ($actionPlans as $ap) {
 
-                return
+                if (
                     $ap->status !== 'closed'
                     &&
                     $ap->due_date
                     &&
-                    $ap->due_date < now()->toDateString();
+                    $ap->due_date->isPast()
+                ) {
 
-            });
+                    $ap->status = 'open';
+
+                    $ap->addFlag('overdue');
+                }
+            }
 
             $allClosed = $actionPlans->every(
                 fn($ap) => $ap->status === 'closed'
             );
 
-            if ($hasOverdue) {
+            $hasOpen = $actionPlans->contains(
+                fn($ap) => $ap->status === 'open'
+            );
 
-                $finding->status = 'need_further_review';
-
-            } elseif ($allClosed) {
+            if ($allClosed) {
 
                 $finding->status = 'closed';
 
+            } elseif ($hasOpen) {
+
+                $finding->status = 'open';
+
             } else {
 
-                $finding->status = 'need_further_review';
+                $finding->status =
+                    'need_further_review';
             }
         }
 

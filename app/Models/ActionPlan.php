@@ -30,6 +30,11 @@ class ActionPlan extends Model
         return $this->hasMany(Verification::class);
     }
 
+    public function extensions()
+    {
+        return $this->hasMany(ActionPlanExtension::class);
+    }
+
     public function getIsOverdueAttribute()
     {
         return $this->due_date
@@ -48,6 +53,36 @@ class ActionPlan extends Model
             $this->status !== 'closed'
             &&
             $this->due_date?->isPast();
+    }
+
+    public function syncOverdue()
+    {
+        if ($this->status === 'closed') {
+            return;
+        }
+
+        if (!$this->isOverdue()) {
+
+            $this->removeFlag('overdue');
+
+            return;
+        }
+
+        $this->addFlag('overdue');
+
+        $hasResponse =
+            $this->hasFlag('submitted')
+            ||
+            $this->hasFlag('revision_required')
+            ||
+            $this->hasFlag('on_site_validation');
+
+        if (!$hasResponse) {
+
+            $this->status = 'open';
+
+            $this->save();
+        }
     }
 
     public function hasFlag($flag)
@@ -69,15 +104,15 @@ class ActionPlan extends Model
 
     public function addFlag($flag)
     {
-        $flags = $this->flags ?? [];
+        $flags = collect($this->flags ?? [])
+            ->push($flag)
+            ->unique()
+            ->values()
+            ->toArray();
 
-        if (!in_array($flag, $flags)) {
-            $flags[] = $flag;
+        $this->flags = $flags;
 
-            $this->update([
-                'flags' => $flags
-            ]);
-        }
+        $this->save();
     }
 
     public function removeFlag($flag)

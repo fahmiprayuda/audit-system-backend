@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/findings/{id}', [FindingController::class, 'show']);
 
     Route::post('/action-plans/{id}/comment',[ActionPlanController::class, 'comment']);
+    Route::post('/action-plans/{id}/extend', [ActionPlanController::class, 'extend']);
 
     Route::prefix("dashboard")->group(function () {
         Route::get("/summary",[DashboardController::class,"summary"]);

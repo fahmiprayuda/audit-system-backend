@@ -26,68 +26,68 @@ class AuditProjectController extends Controller
     }
 
     public function show($id)
-{
-    $project = \App\Models\AuditProject::with([
-        'company',
-        'findings.findingDepartments.department',
-        'findings.findingDepartments.actionPlans'
-    ])->findOrFail($id);
+    {
+        $project = \App\Models\AuditProject::with([
+            'company',
+            'findings.findingDepartments.department',
+            'findings.findingDepartments.actionPlans'
+        ])->findOrFail($id);
 
-    $findingsCollection = $project->findings;
+        $findingsCollection = $project->findings;
 
-    // ===============================
-    // SUMMARY
-    // ===============================
-    $summary = [
-        "total" => $findingsCollection->count(),
-        "significant" => $findingsCollection->where('risk_category', 'Significant')->count(),
-        "moderate" => $findingsCollection->where('risk_category', 'Moderate')->count(),
-        "open" => $findingsCollection->filter(fn($f) => $f->status === 'open')->count(),
-        "in_progress" => $findingsCollection->filter(fn($f) => $f->status === 'in_progress')->count(),
-        "pending_verify" => $findingsCollection->filter(fn($f) => $f->status === 'pending_verify')->count(),
-        "closed" => $findingsCollection->filter(fn($f) => $f->status === 'closed')->count(),
-    ];
-
-    // ===============================
-    // FORMAT FINDINGS
-    // ===============================
-    $findings = $findingsCollection->map(function ($finding) {
-
-        return [
-            'id' => $finding->id,
-            'finding_code' => $finding->finding_code,
-            'title' => $finding->title,
-            'risk_rating' => $finding->risk_rating,
-            'risk_category' => $finding->risk_category,
-            'status' => $finding->status,
-
-            'departments' => $finding->findingDepartments->map(function ($fd) {
-                return [
-                    'finding_department_id' => $fd->id,
-                    'department_id' => $fd->department->id,
-                    'name' => $fd->department->name,
-                    'status' => $fd->status, // 🔥 INI YANG PENTING
-
-                    'action_plans' => $fd->actionPlans->map(function ($ap) {
-                        return [
-                            'id' => $ap->id,
-                            'status' => $ap->status,
-                            'due_date' => $ap->due_date,
-                        ];
-                    })
-                ];
-            }),
+        // ===============================
+        // SUMMARY
+        // ===============================
+        $summary = [
+            "total" => $findingsCollection->count(),
+            "significant" => $findingsCollection->where('risk_category', 'Significant')->count(),
+            "moderate" => $findingsCollection->where('risk_category', 'Moderate')->count(),
+            "open" => $findingsCollection->filter(fn($f) => $f->status === 'open')->count(),
+            "in_progress" => $findingsCollection->filter(fn($f) => $f->status === 'in_progress')->count(),
+            "pending_verify" => $findingsCollection->filter(fn($f) => $f->status === 'pending_verify')->count(),
+            "closed" => $findingsCollection->filter(fn($f) => $f->status === 'closed')->count(),
         ];
-    });
 
-    // ===============================
-    // FINAL RESPONSE 🔥
-    // ===============================
-    return response()->json([
-        "project" => $project,
-        "summary" => $summary,
-        "findings" => $findings
-    ]);
+        // ===============================
+        // FORMAT FINDINGS
+        // ===============================
+        $findings = $findingsCollection->map(function ($finding) {
+
+            return [
+                'id' => $finding->id,
+                'finding_code' => $finding->finding_code,
+                'title' => $finding->title,
+                'risk_rating' => $finding->risk_rating,
+                'risk_category' => $finding->risk_category,
+                'status' => $finding->status,
+
+                'departments' => $finding->findingDepartments->map(function ($fd) {
+                    return [
+                        'finding_department_id' => $fd->id,
+                        'department_id' => $fd->department->id,
+                        'name' => $fd->department->name,
+                        'status' => $fd->status, // 🔥 INI YANG PENTING
+
+                        'action_plans' => $fd->actionPlans->map(function ($ap) {
+                            return [
+                                'id' => $ap->id,
+                                'status' => $ap->status,
+                                'due_date' => $ap->due_date,
+                            ];
+                        })
+                    ];
+                }),
+            ];
+        });
+
+        // ===============================
+        // FINAL RESPONSE 🔥
+        // ===============================
+        return response()->json([
+            "project" => $project,
+            "summary" => $summary,
+            "findings" => $findings
+        ]);
 }
 
     // ===============================
