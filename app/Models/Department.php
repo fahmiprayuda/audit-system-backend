@@ -18,4 +18,11 @@ class Department extends Model
             'finding_departments'
         );
     }
+
+    public function findingDepartments()
+    {
+        return $this->hasMany(
+            FindingDepartment::class
+        );
+    }
 }

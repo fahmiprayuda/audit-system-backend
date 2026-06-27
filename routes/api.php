@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MyTaskController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ActionPlanMonitoringController;
 use App\Http\Middleware\RoleMiddleware;
 
 
@@ -161,6 +162,7 @@ Route::middleware([
         Route::get('/dashboard/project-portfolio',[DashboardController::class, 'projectPortfolio']);
         Route::get('/dashboard/projects/{id}/details',[DashboardController::class, 'projectDetails']);
     
+        Route::get('/dashboard/action-plan-monitoring',[ActionPlanMonitoringController::class, 'index']);
     });
 
 Route::middleware([
