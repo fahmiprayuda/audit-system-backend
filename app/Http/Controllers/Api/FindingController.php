@@ -153,13 +153,15 @@ SHOW DETAIL
                     'status' => $fd->status,
 
                     'action_plans' => $fd->actionPlans->map(fn($ap) => [
-                    'id' => $ap->id,
-                    'root_cause' => $ap->root_cause ?? '',
-                    'corrective_action' => $ap->corrective_action ?? '',
-                    'status' => $ap->status,
-                    'due_date' => $ap->due_date,
+                        'id' => $ap->id,
+                        'root_cause' => $ap->root_cause ?? '',
+                        'corrective_action' => $ap->corrective_action ?? '',
+                        'status' => $ap->status,
+                        'queue' => $ap->queue,
+                        'primary_flag' => $ap->primary_flag,
+                        'due_date' => $ap->due_date,
 
-                    'flags' => array_values(
+                        'flags' => array_values(
                                     array_unique(
                                         array_merge(
                                             $ap->flags ?? [],

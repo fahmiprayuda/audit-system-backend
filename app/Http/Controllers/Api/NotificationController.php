@@ -48,4 +48,18 @@ class NotificationController extends Controller
             'message' => 'ok'
         ];
     }
+
+    public function markAllRead()
+    {
+        auth()->user()
+            ->notifications()
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now()
+            ]);
+
+        return [
+            'message' => 'ok'
+        ];
+    }
 }

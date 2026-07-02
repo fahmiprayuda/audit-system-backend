@@ -35,11 +35,9 @@ class ActionPlan extends Model
         return $this->hasMany(ActionPlanExtension::class);
     }
 
-    public function getIsOverdueAttribute()
+    public function getIsOverdueAttribute() : bool
     {
-        return $this->due_date
-            && $this->due_date < now()->toDateString()
-            && $this->status !== 'closed';
+        return $this->isOverdue();
     }
 
     public function comments()
@@ -47,7 +45,7 @@ class ActionPlan extends Model
         return $this->hasMany(ActionPlanComment::class);
     }
 
-    public function isOverdue()
+    public function isOverdue() : bool
     {
         return
             $this->status !== 'closed'
@@ -127,5 +125,79 @@ class ActionPlan extends Model
         $this->update([
             'flags' => $flags
         ]);
+    }
+
+    public function getPrimaryFlagAttribute(): ?string
+    {
+        foreach ([
+            'revision_required',
+            'submitted',
+            'on_site_validation',
+        ] as $flag) {
+            if ($this->hasFlag($flag)) {
+                return $flag;
+            }
+        }
+
+        return null;
+    }
+
+    public function getQueueAttribute(): string
+    {
+        if ($this->status === 'closed') {
+            return 'closed';
+        }
+
+        return match ($this->primary_flag) {
+
+            'revision_required' => 'revision',
+
+            'submitted' => 'waiting',
+
+            'on_site_validation' => 'site',
+
+            default => $this->hasFlag('overdue')
+                ? 'overdue'
+                : 'new',
+        };
+    }
+
+    public function replacePrimaryFlag(string $flag)
+    {
+    $allowed = [
+        'submitted',
+        'revision_required',
+        'on_site_validation',
+        ];
+    if (!in_array($flag, $allowed)) {
+        throw new \InvalidArgumentException(
+            "Invalid primary flag [$flag]"
+        );
+    }
+
+    $flags = collect($this->flags ?? [])
+
+            ->reject(fn ($f) => in_array($f, [
+                'submitted',
+                'revision_required',
+                'on_site_validation',
+            ]))
+
+            ->values()
+
+            ->toArray();
+
+        $flags[] = $flag;
+
+        $this->update([
+            'flags' => array_values(array_unique($flags))
+        ]);
+    }
+
+    public function getDetailUrlAttribute()
+    {
+        $findingId = $this->findingDepartment->finding_id;
+
+        return "/findings/{$findingId}?fd={$this->finding_department_id}&ap={$this->id}";
     }
 }

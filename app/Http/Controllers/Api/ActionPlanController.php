@@ -1,17 +1,19 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 use App\Services\AuditTrailService;
 use App\Services\StatusService;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Services\NotificationService;
 use App\Models\User;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
 use App\Models\ActionPlanExtension;
 use App\Models\actionPlanCommentAttachment;
-use App\Services\NotificationService;
 
 class ActionPlanController extends Controller
 {
@@ -31,6 +33,8 @@ class ActionPlanController extends Controller
             'need_further_review';
 
         $ap = ActionPlan::create($validated);
+
+        NotificationService::newActionPlan($ap);
 
         StatusService::sync($ap->finding_department_id);
 
@@ -56,6 +60,8 @@ class ActionPlanController extends Controller
                 'status' => 'need_further_review'
             ]);
 
+            NotificationService::newActionPlan($ap);
+
             StatusService::sync($ap->finding_department_id);
         }
 
@@ -66,63 +72,63 @@ class ActionPlanController extends Controller
 
     /* ================= ACTION ================= */
 
-    public function submit(Request $request, $id)
-    {
-        if (!$request->auditee_comment || trim($request->auditee_comment) === '') {
-            return response()->json([
-                'message' => 'Comment wajib diisi'
-            ], 400);
-        }
+    // public function submit(Request $request, $id)
+    // {
+    //     if (!$request->auditee_comment || trim($request->auditee_comment) === '') {
+    //         return response()->json([
+    //             'message' => 'Comment wajib diisi'
+    //         ], 400);
+    //     }
 
-        if ($ap->status === 'closed') {
-            return response()->json([
-                'message' => 'Action Plan already closed'
-            ], 400);
-        }
+    //     if ($ap->status === 'closed') {
+    //         return response()->json([
+    //             'message' => 'Action Plan already closed'
+    //         ], 400);
+    //     }
 
-        $ap = ActionPlan::findOrFail($id);
-        $ap->addFlag('submitted');
-        $ap->removeFlag('revision_required');
+    //     $ap = ActionPlan::findOrFail($id);
+    //     $ap->addFlag('submitted');
+    //     $ap->removeFlag('revision_required');
 
-        ActionPlanComment::create([
-            'action_plan_id' => $ap->id,
-            'role' => auth()->user()->role,
-            'message' => $request->auditee_comment,
-            'created_by' => auth()->id()
-        ]);
+    //     ActionPlanComment::create([
+    //         'action_plan_id' => $ap->id,
+    //         'role' => auth()->user()->role,
+    //         'message' => $request->auditee_comment,
+    //         'created_by' => auth()->id()
+    //     ]);
 
-        if ($request->hasFile('evidences')) {
+    //     if ($request->hasFile('evidences')) {
 
-            foreach ($request->file('evidences') as $file) {
+    //         foreach ($request->file('evidences') as $file) {
 
-                $path = $file->store(
-                    'evidences',
-                    'public'
-                );
+    //             $path = $file->store(
+    //                 'evidences',
+    //                 'public'
+    //             );
 
-                $ap->evidences()->create([
-                    'file_path' => $path,
-                    'file_name' => $file->getClientOriginalName(),
-                    'uploaded_by' => auth()->id(),
-                ]);
-            }
-        }
+    //             $ap->evidences()->create([
+    //                 'file_path' => $path,
+    //                 'file_name' => $file->getClientOriginalName(),
+    //                 'uploaded_by' => auth()->id(),
+    //             ]);
+    //         }
+    //     }
 
-        StatusService::sync(
-            $ap->finding_department_id
-        );
+    //     StatusService::sync(
+    //         $ap->finding_department_id
+    //     );
 
-        AuditTrailService::log(
-            'action_plan',
-            'submit',
-            $ap->id,
-            'Action plan submitted'
-        );
+    //     AuditTrailService::log(
+    //         'action_plan',
+    //         'submit',
+    //         $ap->id,
+    //         'Action plan submitted'
+    //     );
 
-        return response()->json([
-            'message' => 'Submitted'
-        ]);
-    }
+    //     return response()->json([
+    //         'message' => 'Submitted'
+    //     ]);
+    // }
 
     public function close($id)
     {
@@ -141,6 +147,8 @@ class ActionPlanController extends Controller
             'closed_by' => auth()->id()
         ]);
 
+        NotificationService::actionPlanClosed($ap);
+
         StatusService::sync($ap->finding_department_id);
 
         AuditTrailService::log(
@@ -157,7 +165,12 @@ class ActionPlanController extends Controller
     {
         $request->validate([
             'message' => 'required|string',
-            'attachments.*' => 'file|max:10240'
+
+            'workflow_action' =>
+                'nullable|in:submitted,revision_required',
+
+            'attachments.*' =>
+                'file|max:10240'
         ]);
 
         $ap = ActionPlan::findOrFail($id);
@@ -168,72 +181,65 @@ class ActionPlanController extends Controller
                 ], 403);
             }
 
-        $comment = ActionPlanComment::create([
-            'action_plan_id' => $ap->id,
-            'role' => auth()->user()->role,
-            'message' => $request->message,
-            'created_by' => auth()->id(),
-        ]);
+          
+            DB::beginTransaction();
+        try {
+                $comment = ActionPlanComment::create([
+                'action_plan_id' => $ap->id,
+                'role' => auth()->user()->role,
+                'message' => $request->message,
+                'created_by' => auth()->id(),
+            ]);
 
-        $user = auth()->user();
+            $user = auth()->user();
 
-        if ($user->role === 'auditee') {
+            if ($request->filled('workflow_action')) {
 
-            $ap->addFlag('submitted');
-            $ap->removeFlag('revision_required');
+                // Validasi role
+                if (
+                    $user->role === 'auditee'
+                    &&
+                    $request->workflow_action !== 'submitted'
+                ) {
+                    return response()->json([
+                        'message' => 'Invalid workflow action.'
+                    ], 403);
+                }
 
-        } elseif (
-            in_array(
-                $user->role,
-                ['auditor', 'manager']
-            )
-        ) {
+                if (
+                    in_array($user->role, ['auditor', 'manager'])
+                    &&
+                    $request->workflow_action !== 'revision_required'
+                ) {
+                    return response()->json([
+                        'message' => 'Invalid workflow action.'
+                    ], 403);
+                }
 
-            $ap->addFlag('revision_required');
-            $ap->removeFlag('submitted');
-        }
+                $ap->replacePrimaryFlag(
+                    $request->workflow_action
+                );
 
-        $findingId =
-            $ap->findingDepartment
-            ->finding_id;
+                if ($request->workflow_action === 'submitted') {
 
-        if ($user->role === 'auditee') {
+                    NotificationService::submitted($ap);
 
-            $receiverIds = \App\Models\User::whereIn(
-                'role',
-                ['manager', 'auditor']
-            )
-            ->where('id', '!=', $user->id)
-            ->pluck('id');
+                } elseif ($request->workflow_action === 'revision_required') {
 
-        } else {
+                    NotificationService::revisionRequired($ap);
 
-            $departmentId =
-                $ap->findingDepartment
-                ->department_id;
+                }
 
-            $receiverIds = \App\Models\User::where(
-                'role',
-                'auditee'
-            )
-            ->where(
-                'department_id',
-                $departmentId
-            )
-            ->where('id', '!=', $user->id)
-            ->pluck('id');
-        }
+                AuditTrailService::log(
+                    'action_plan',
+                    'workflow_changed',
+                    $ap->id,
+                    "Workflow changed to {$request->workflow_action}"
+                );
+            }
 
-        foreach ($receiverIds as $userId) {
-
-            NotificationService::create(
-                $userId,
-                'comment',
-                'New Comment',
-                $user->name . ' sent a new message',
-                "/findings/{$findingId}"
-            );
-        }
+            // selalu kirim notif comment
+            NotificationService::comment($ap, $user);
 
             if ($request->hasFile('attachments')) {
 
@@ -260,41 +266,54 @@ class ActionPlanController extends Controller
                 'Added comment'
             );
 
+            DB::commit();
+
             return response()->json([
                 'message' => 'Comment added'
             ]);
-    }    
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to add comment',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
         
-    public function requestRevision(Request $request, $id)
-    {
+    }
+        
+    // public function requestRevision(Request $request, $id)
+    // {
 
-        $request->validate([
-            'message' => 'required|string'
-        ]);
+    //     $request->validate([
+    //         'message' => 'required|string'
+    //     ]);
 
-        $ap = ActionPlan::findOrFail($id);
+    //     $ap = ActionPlan::findOrFail($id);
 
-        $ap->addFlag('revision_required');
-        $ap->removeFlag('submitted');
+    //     $ap->addFlag('revision_required');
+    //     $ap->removeFlag('submitted');
 
-        ActionPlanComment::create([
-            'action_plan_id' => $ap->id,
-            'role' => auth()->user()->role,
-            'message' => $request->message,
-            'created_by' => auth()->id(),
-        ]);
+    //     ActionPlanComment::create([
+    //         'action_plan_id' => $ap->id,
+    //         'role' => auth()->user()->role,
+    //         'message' => $request->message,
+    //         'created_by' => auth()->id(),
+    //     ]);
 
-        AuditTrailService::log(
-            'action_plan',
-            'revision_requested',
-            $ap->id,
-            'Revision requested'
-        );
+    //     AuditTrailService::log(
+    //         'action_plan',
+    //         'revision_requested',
+    //         $ap->id,
+    //         'Revision requested'
+    //     );
 
-        return response()->json([
-            'message' => 'Revision requested'
-        ]);
-    }    
+    //     return response()->json([
+    //         'message' => 'Revision requested'
+    //     ]);
+    // }    
 
     public function extend(Request $request, $id)
     {
@@ -307,6 +326,8 @@ class ActionPlanController extends Controller
 
         $ap = ActionPlan::findOrFail($id);
 
+        $ap->removeFlag('overdue');
+
         // Simpan history extension
         ActionPlanExtension::create([
             'action_plan_id' => $ap->id,
@@ -318,51 +339,24 @@ class ActionPlanController extends Controller
             'extended_by' => auth()->id(),
         ]);
 
-        $flags = $ap->flags ?? [];
-
-        // overdue otomatis hilang
-        $flags = array_values(
-            array_diff($flags, ['overdue'])
-        );
-
         // Jika auditor pilih Need Further Review
-        if (
-            $request->status_after_extension
-            === 'need_further_review'
-        ) {
+        if ($request->status_after_extension === 'need_further_review') {
 
-            if (
-                !in_array(
-                    'on_site_validation',
-                    $flags
-                )
-            ) {
-                $flags[] = 'on_site_validation';
-            }
+            $ap->replacePrimaryFlag('on_site_validation');
 
-        } else {
-
-            // selain NFR hapus flag validasi lapangan
-            $flags = array_values(
-                array_diff(
-                    $flags,
-                    ['on_site_validation']
-                )
-            );
+            NotificationService::siteValidation($ap);
         }
 
         // Jika langsung Closed
-        if (
-            $request->status_after_extension
-            === 'closed'
-        ) {
-            $flags = [];
+        if ($request->status_after_extension === 'closed') {
+            $ap->update([
+                'flags' => []
+            ]);
         }
 
         $ap->update([
             'due_date' => $request->new_due_date,
             'status' => $request->status_after_extension,
-            'flags' => $flags,
         ]);
 
         StatusService::sync(
