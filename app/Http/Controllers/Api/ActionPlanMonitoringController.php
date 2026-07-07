@@ -6,15 +6,56 @@ use App\Http\Controllers\Controller;
 use App\Models\ActionPlan;
 use App\Models\Department;
 use App\Models\ActionPlanExtension;
+use App\Models\AuditProject;
 
 use Illuminate\Http\Request;
 
 class ActionPlanMonitoringController extends Controller
 {
+    private function percent($value, $total)
+    {
+        return $total
+            ? round($value / $total * 100)
+            : 0;
+    }
+
     public function index()
     {
-        $actionPlans = ActionPlan::all();
+        $projectIds = AuditProject::query()
 
+            ->when(
+                request()->filled("start_date")
+                &&
+                request()->filled("end_date"),
+
+                function ($q) {
+
+                    $q->whereBetween(
+                        "release_date",
+                        [
+                            request("start_date"),
+                            request("end_date"),
+                        ]
+                    );
+                }
+            )
+
+            ->pluck("id");
+
+        $actionPlans = ActionPlan::whereHas(
+            "findingDepartment.finding",
+            function ($q) use ($projectIds) {
+
+                $q->whereIn(
+                    "audit_project_id",
+                    $projectIds
+                );
+
+            }
+        )->get();
+
+        $totalActionPlans = $actionPlans->count();
+        
         $summary = [
 
             'open' =>
@@ -73,6 +114,24 @@ class ActionPlanMonitoringController extends Controller
                     )
                     ->count(),
         ];
+
+        $summary["open_percent"] =
+            $this->percent(
+                $summary["open"],
+                $totalActionPlans
+            );
+
+        $summary["need_further_review_percent"] =
+            $this->percent(
+                $summary["need_further_review"],
+                $totalActionPlans
+            );
+
+        $summary["closed_percent"] =
+            $this->percent(
+                $summary["closed"],
+                $totalActionPlans
+            );
 
         $aging = [
             '0_30' => 0,
@@ -159,12 +218,45 @@ class ActionPlanMonitoringController extends Controller
                 )->count(),
         ];        
 
+        $distribution = [
+
+            [
+                "name" => "Open",
+                "value" => $summary["open"],
+            ],
+
+            [
+                "name" => "Need Further Review",
+                "value" => $summary["need_further_review"],
+            ],
+
+            [
+                "name" => "Closed",
+                "value" => $summary["closed"],
+            ],
+
+        ];
 
         return response()->json([
-            'summary' => $summary,
-            'aging' => $aging,
-            'department_overdue' => $departmentOverdue,
-            'extension_summary' => $extensionSummary,
+            "period" => [
+
+                            "start" =>
+                                request("start_date")
+                                ??
+                                AuditProject::min("release_date"),
+
+                            "end" =>
+                                request("end_date")
+                                ??
+                                AuditProject::max("release_date"),
+
+                        ],
+            "total_action_plans" => $totalActionPlans,
+            "summary" => $summary,
+            "distribution" => $distribution,
+            "aging" => $aging,
+            "department_overdue" => $departmentOverdue,
+            "extension_summary" => $extensionSummary,
         ]);
     }
 }

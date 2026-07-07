@@ -162,6 +162,7 @@ Route::middleware([
         Route::get('/dashboard/findings/{id}/details',[DashboardController::class, 'findingDetails']);
         Route::get('/dashboard/project-portfolio',[DashboardController::class, 'projectPortfolio']);
         Route::get('/dashboard/projects/{id}/details',[DashboardController::class, 'projectDetails']);
+        Route::get("/dashboard-overview",[DashboardController::class, 'overview']);
     
         Route::get('/dashboard/action-plan-monitoring',[ActionPlanMonitoringController::class, 'index']);
     });

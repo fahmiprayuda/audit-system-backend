@@ -16,22 +16,46 @@ use App\Models\FindingDepartment;
 
 class DashboardController extends Controller
 {
-    private function periodFilter($query, Request $request)
+    private function projectIds(Request $request)
     {
-        if (
-            $request->start_date &&
-            $request->end_date
-        ) {
-            $query->whereBetween(
-                'release_date',
-                [
-                    $request->start_date,
-                    $request->end_date
-                ]
-            );
-        }
+        return AuditProject::query()
 
-        return $query;
+            ->when(
+                $request->filled("start_date")
+                &&
+                $request->filled("end_date"),
+
+                function ($q) use ($request) {
+
+                    $q->whereBetween(
+                        "release_date",
+                        [
+                            $request->start_date,
+                            $request->end_date,
+                        ]
+                    );
+                }
+            )
+
+            ->pluck("id");
+    }
+
+    private function actionPlans(Request $request)
+    {
+        $projectIds = $this->projectIds($request);
+
+        return ActionPlan::query()
+
+            ->whereHas(
+                "findingDepartment.finding",
+                function ($q) use ($projectIds) {
+
+                    $q->whereIn(
+                        "audit_project_id",
+                        $projectIds
+                    );
+                }
+            );
     }
     public function summary()
     {
@@ -115,6 +139,71 @@ class DashboardController extends Controller
                     "closed"
                 )
                 ->count(),
+        ]);
+    }
+
+    public function overview(Request $request)
+    {
+        $query = $this->actionPlans($request);
+
+        $total = (clone $query)->count();
+
+        $open = (clone $query)
+            ->where('status', 'open')
+            ->count();
+
+        $nfr = (clone $query)
+            ->where('status', 'need_further_review')
+            ->count();
+
+        $closed = (clone $query)
+            ->where('status', 'closed')
+            ->count();
+
+        return response()->json([
+
+            "period" => [
+                "start" => $request->start_date,
+                "end" => $request->end_date,
+            ],
+
+            "total_action_plans" => $total,
+
+            "summary" => [
+
+                "open" => $open,
+                "need_further_review" => $nfr,
+                "closed" => $closed,
+
+                "open_percent" =>
+                    $total ? round($open / $total * 100) : 0,
+
+                "need_further_review_percent" =>
+                    $total ? round($nfr / $total * 100) : 0,
+
+                "closed_percent" =>
+                    $total ? round($closed / $total * 100) : 0,
+            ],
+
+            "distribution" => [
+
+                [
+                    "name" => "Open",
+                    "value" => $open,
+                ],
+
+                [
+                    "name" => "Need Further Review",
+                    "value" => $nfr,
+                ],
+
+                [
+                    "name" => "Closed",
+                    "value" => $closed,
+                ],
+
+            ]
+
         ]);
     }
 
