@@ -259,4 +259,115 @@ class ActionPlanMonitoringController extends Controller
             "extension_summary" => $extensionSummary,
         ]);
     }
+
+    public function flagDetails(Request $request)
+    {
+        $flag = $request->flag;
+
+        $query = ActionPlan::query()
+            ->with([
+                "findingDepartment.department",
+                "findingDepartment.finding",
+            ]);
+
+        switch ($flag) {
+
+            case "overdue":
+
+                $query
+                    ->whereDate("due_date", "<", today())
+                    ->where("status", "!=", "closed");
+
+                break;
+
+            case "submitted":
+
+                $query
+                    ->whereJsonContains(
+                        "flags",
+                        "submitted"
+                    );
+
+                break;
+
+            case "revision_required":
+
+                $query
+                    ->whereJsonContains(
+                        "flags",
+                        "revision_required"
+                    );
+
+                break;
+
+            case "on_site_validation":
+
+                $query
+                    ->whereJsonContains(
+                        "flags",
+                        "on_site_validation"
+                    );
+
+                break;
+        }
+
+        $items = $query->get();
+
+        $departmentDistribution =
+
+        $items
+
+        ->groupBy(fn($item) =>
+            $item
+                ->findingDepartment
+                ->department
+                ->name
+        )
+
+        ->map(function ($rows, $dept) {
+
+            return [
+
+                "department" => $dept,
+
+                "total" => $rows->count(),
+
+            ];
+
+        })
+
+        ->values();
+
+        $days =
+
+        $items
+
+        ->filter(fn($ap) =>
+
+            $ap->due_date &&
+            $ap->due_date->isPast()
+
+        )
+
+        ->map(fn($ap) =>
+
+            $ap->due_date->diffInDays(now())
+
+        );
+
+        $summary = [
+            "total" => $items->count(),
+            "departments" => $departmentDistribution->count(),
+            "oldest_days" => (int) ($days->max() ?? 0),
+            "average_days" => round( $days->avg() ?? 0 ),
+        ];
+
+        return response()->json([
+            "summary" => $summary,
+            "items" => $items,
+            "department_distribution" => array_values(
+                $departmentDistribution->toArray()
+            ),
+        ]);
+    }
 }

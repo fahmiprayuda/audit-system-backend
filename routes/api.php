@@ -165,6 +165,7 @@ Route::middleware([
         Route::get("/dashboard-overview",[DashboardController::class, 'overview']);
     
         Route::get('/dashboard/action-plan-monitoring',[ActionPlanMonitoringController::class, 'index']);
+        Route::get("/dashboard/action-plan-monitoring/flag-details",[ActionPlanMonitoringController::class, "flagDetails"]);
     });
 
 Route::middleware([
