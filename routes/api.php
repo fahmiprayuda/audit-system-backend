@@ -9,13 +9,14 @@ use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ActionPlanController;
 use App\Http\Controllers\Api\VerificationController;
-use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\FindingDepartmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MyTaskController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ActionPlanMonitoringController;
+use App\Http\Controllers\Master\CompanyController;
+
 use App\Http\Middleware\RoleMiddleware;
 
 
@@ -45,7 +46,7 @@ Route::get('/projects/{id}/findings', [AuditProjectController::class, 'findings'
 Route::put('/projects/{id}', [AuditProjectController::class,'update']);
 Route::delete('/projects/{id}', [AuditProjectController::class,'destroy']);
 
-Route::get('/companies', [CompanyController::class, 'index']);
+Route::get('/master/companies', [CompanyController::class, 'index']);
 
 Route::get('/departments', [DepartmentController::class, 'index']);
 
@@ -79,7 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{id}', [AuditProjectController::class, 'show']);
     Route::get('/projects/{id}/findings', [AuditProjectController::class, 'findings']);
 
-    Route::get('/companies', [CompanyController::class, 'index']);
+    Route::get('/master/companies', [CompanyController::class, 'index']);
+    Route::get('/master/companies/check-code',[CompanyController::class, "checkCode"]);
+
     Route::get('/departments', [DepartmentController::class, 'index']);
 
     Route::get('/findings', [FindingController::class, 'index']);
@@ -106,10 +109,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile',[AuthController::class,'updateProfile']);
     Route::post('/change-password',[AuthController::class, 'changePassword']);
 
-
-    
-
-});
+    Route::prefix("master")->group(function () {
+        Route::apiResource("companies", CompanyController::class);});
+    });
 
 Route::middleware([
     'auth:sanctum',
@@ -186,3 +188,4 @@ Route::middleware([
         Route::get('/my-tasks', [MyTaskController::class, 'index']);
 
     });
+
