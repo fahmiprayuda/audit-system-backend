@@ -56,6 +56,14 @@ class CompanyController extends Controller
 
         }
 
+        if ($company->departments()->exists()) {
+
+            return response()->json([
+                "message" => "Company still has departments."
+            ], 422);
+
+        }
+
         $company->delete();
 
         return response()->json([

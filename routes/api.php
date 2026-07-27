@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuditProjectController;
 use App\Http\Controllers\Api\AuditTrailController;
 use App\Http\Controllers\Api\FindingController;
-use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ActionPlanController;
 use App\Http\Controllers\Api\VerificationController;
@@ -16,6 +15,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ActionPlanMonitoringController;
 use App\Http\Controllers\Master\CompanyController;
+use App\Http\Controllers\Master\DepartmentController;
 
 use App\Http\Middleware\RoleMiddleware;
 
@@ -110,82 +110,86 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/change-password',[AuthController::class, 'changePassword']);
 
     Route::prefix("master")->group(function () {
-        Route::apiResource("companies", CompanyController::class);});
+        Route::apiResource("companies", CompanyController::class);
+        Route::get('companies/{company}/departments', [DepartmentController::class, 'index']);
+        Route::post('companies/{company}/departments',[DepartmentController::class, 'store']);
+        Route::put('departments/{department}',[DepartmentController::class, 'update']);
+        Route::delete('departments/{department}',[DepartmentController::class, 'destroy']);
     });
 
-Route::middleware([
-    'auth:sanctum',
-    'role:manager'
-    ])->group(function () {
+    Route::middleware([
+        'auth:sanctum',
+        'role:manager'
+        ])->group(function () {
 
-    Route::apiResource('/users',UserController::class);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
-    Route::post('/users/{id}/reset-password',[UserController::class, 'resetPassword']);
+        Route::apiResource('/users',UserController::class);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        Route::post('/users/{id}/reset-password',[UserController::class, 'resetPassword']);
 
-    Route::get('/audit-trails',[AuditTrailController::class, 'index']);
+        Route::get('/audit-trails',[AuditTrailController::class, 'index']);
 
-});
-
-Route::middleware([
-    'auth:sanctum',
-    'role:manager,auditor'
-    ])->group(function () {
-
-        // Project
-        Route::post('/projects', [AuditProjectController::class, 'store']);
-        Route::put('/projects/{id}', [AuditProjectController::class, 'update']);
-
-        // Finding
-        Route::post('/finding-departments', [FindingDepartmentController::class, 'store']);
-        Route::post('/findings', [FindingController::class, 'store']);
-        Route::put('/findings/{id}', [FindingController::class, 'update']);
-        Route::post('/findings/add-department', [FindingController::class, 'addDepartment']);
-
-        // Action Plan Management
-        Route::post('/action-plans', [ActionPlanController::class, 'store']);
-        Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
-
-        Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
     });
 
-Route::middleware([
-    'auth:sanctum',
-    'role:manager,auditor'
-    ])->group(function () {
+    Route::middleware([
+        'auth:sanctum',
+        'role:manager,auditor'
+        ])->group(function () {
 
-        Route::delete('/projects/{id}',[AuditProjectController::class, 'destroy']);
+            // Project
+            Route::post('/projects', [AuditProjectController::class, 'store']);
+            Route::put('/projects/{id}', [AuditProjectController::class, 'update']);
 
-        Route::delete('/findings/{id}',[FindingController::class, 'destroy']);
-        Route::delete('/finding-departments/{id}',[FindingDepartmentController::class, 'destroy']);
+            // Finding
+            Route::post('/finding-departments', [FindingDepartmentController::class, 'store']);
+            Route::post('/findings', [FindingController::class, 'store']);
+            Route::put('/findings/{id}', [FindingController::class, 'update']);
+            Route::post('/findings/add-department', [FindingController::class, 'addDepartment']);
 
-        Route::get('/dashboard/executive-summary',[DashboardController::class, 'executiveSummary']);
-        Route::get('/dashboard/top-overdue-findings',[DashboardController::class, 'topOverdueFindings']);
-        Route::get('/dashboard/overdue-findings-by-department',[DashboardController::class, 'overdueFindingsByDepartment']);
-        Route::get('/dashboard/findings/{id}/details',[DashboardController::class, 'findingDetails']);
-        Route::get('/dashboard/project-portfolio',[DashboardController::class, 'projectPortfolio']);
-        Route::get('/dashboard/projects/{id}/details',[DashboardController::class, 'projectDetails']);
-        Route::get("/dashboard-overview",[DashboardController::class, 'overview']);
-    
-        Route::get('/dashboard/action-plan-monitoring',[ActionPlanMonitoringController::class, 'index']);
-        Route::get("/dashboard/action-plan-monitoring/flag-details",[ActionPlanMonitoringController::class, "flagDetails"]);
-    });
+            // Action Plan Management
+            Route::post('/action-plans', [ActionPlanController::class, 'store']);
+            Route::post('/action-plans/bulk', [ActionPlanController::class, 'bulkStore']);
 
-Route::middleware([
-    'auth:sanctum',
-    'role:auditee'
-    ])->group(function () {
+            Route::post('/action-plans/{id}/close', [ActionPlanController::class, 'close']);
+        });
 
-        Route::post('/action-plans/{id}/submit',
-            [ActionPlanController::class, 'submit']
-        );
-    });
+    Route::middleware([
+        'auth:sanctum',
+        'role:manager,auditor'
+        ])->group(function () {
 
-Route::middleware([
+            Route::delete('/projects/{id}',[AuditProjectController::class, 'destroy']);
+
+            Route::delete('/findings/{id}',[FindingController::class, 'destroy']);
+            Route::delete('/finding-departments/{id}',[FindingDepartmentController::class, 'destroy']);
+
+            Route::get('/dashboard/executive-summary',[DashboardController::class, 'executiveSummary']);
+            Route::get('/dashboard/top-overdue-findings',[DashboardController::class, 'topOverdueFindings']);
+            Route::get('/dashboard/overdue-findings-by-department',[DashboardController::class, 'overdueFindingsByDepartment']);
+            Route::get('/dashboard/findings/{id}/details',[DashboardController::class, 'findingDetails']);
+            Route::get('/dashboard/project-portfolio',[DashboardController::class, 'projectPortfolio']);
+            Route::get('/dashboard/projects/{id}/details',[DashboardController::class, 'projectDetails']);
+            Route::get("/dashboard-overview",[DashboardController::class, 'overview']);
+        
+            Route::get('/dashboard/action-plan-monitoring',[ActionPlanMonitoringController::class, 'index']);
+            Route::get("/dashboard/action-plan-monitoring/flag-details",[ActionPlanMonitoringController::class, "flagDetails"]);
+        });
+
+    Route::middleware([
         'auth:sanctum',
         'role:auditee'
-    ])->group(function () {
+        ])->group(function () {
 
-        Route::get('/my-tasks', [MyTaskController::class, 'index']);
+            Route::post('/action-plans/{id}/submit',
+                [ActionPlanController::class, 'submit']
+            );
+        });
 
-    });
+    Route::middleware([
+            'auth:sanctum',
+            'role:auditee'
+        ])->group(function () {
 
+            Route::get('/my-tasks', [MyTaskController::class, 'index']);
+
+        });
+});

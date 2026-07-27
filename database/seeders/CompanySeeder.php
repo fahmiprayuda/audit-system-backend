@@ -10,29 +10,69 @@ class CompanySeeder extends Seeder
     public function run(): void
     {
 
-        Company::insert([
-
-            [
-                'code' => 'FFS',
-                'name' => 'Fks Food Sejahtera'
-            ],
-
-            [
-                'code' => 'TPS',
-                'name' => 'Tiga Pilar Sejahtera'
-            ],
-
-            [
-                'code' => 'PTP',
-                'name' => 'Putra Taro Paloma'
-            ],
-
-            [
-                'code' => 'SPJ',
-                'name' => 'Subafood Pangan Jaya'
-            ]
-
+        $fks = Company::create([
+            "code" => "FFS",
+            "name" => "FKS Food Sejahtera",
         ]);
+
+        $fks->departments()->createMany([
+
+        [
+            "code" => "FIN",
+            "name" => "Finance & Accounting",
+        ],
+
+        [
+            "code" => "HR",
+            "name" => "HRGA",
+        ],
+
+        [
+            "code" => "IT",
+            "name" => "IT Department",
+        ],
+
+        [
+            "code" => "MFG",
+            "name" => "Manufacturing",
+        ],
+
+        [
+            "code" => "PROC",
+            "name" => "Procurement",
+        ],
+
+        [
+            "code" => "SCM",
+            "name" => "Supply Chain",
+        ],
+
+        [
+            "code" => "RND",
+            "name" => "Research & Development",
+        ],
+
+        [
+            "code" => "QA",
+            "name" => "Quality",
+        ],
+
+        [
+            "code" => "TM",
+            "name" => "Trade Marketing",
+        ],
+
+        [
+            "code" => "MKT",
+            "name" => "Marketing",
+        ],
+
+        [
+            "code" => "OE",
+            "name" => "Operational Excellence",
+        ],
+
+    ]);
 
     }
 }

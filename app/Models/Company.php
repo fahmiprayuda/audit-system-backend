@@ -17,4 +17,9 @@ class Company extends Model
         return $this->hasMany(AuditProject::class);
     }
 
+    public function departments()
+    {
+        return $this->hasMany(Department::class);
+    }
+
 }

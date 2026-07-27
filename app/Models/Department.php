@@ -7,9 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Department extends Model
 {
     protected $fillable = [
+        'company_id',
         'name',
-        'code'
+        'code',
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function findings()
     {

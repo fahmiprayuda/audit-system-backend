@@ -27,8 +27,10 @@ class AuditProjectController extends Controller
 
     public function show($id)
     {
+        /// Anak viva
         $project = \App\Models\AuditProject::with([
             'company',
+            'company.departments', 
             'findings.findingDepartments.department',
             'findings.findingDepartments.actionPlans'
         ])->findOrFail($id);
@@ -84,11 +86,11 @@ class AuditProjectController extends Controller
         // FINAL RESPONSE 🔥
         // ===============================
         return response()->json([
-            "project" => $project,
+            "project" => $project->load("company.departments"),
             "summary" => $summary,
             "findings" => $findings
         ]);
-}
+    }
 
     // ===============================
     // GET FINDINGS BY PROJECT
