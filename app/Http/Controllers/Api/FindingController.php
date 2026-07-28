@@ -126,7 +126,7 @@ SHOW DETAIL
         $this->authorizeAuditee($id);   
 
         $finding = Finding::with([
-            'project.company',
+            'project.company.departments',
             'findingDepartments.department',
             'findingDepartments.actionPlans',
             'findingDepartments.actionPlans.verifications',
@@ -141,6 +141,18 @@ SHOW DETAIL
             'title' => $finding->title,
             'description' => $finding->description ?? '',
             'risk_rating' => $finding->risk_rating,
+
+            'project' => [
+                'id' => $finding->project->id,
+                'project_code' => $finding->project->project_code,
+                'project_name' => $finding->project->project_name,
+
+                'company' => [
+                    'id' => $finding->project->company->id,
+                    'name' => $finding->project->company->name,
+                    'departments' => $finding->project->company->departments
+                ]
+            ],
 
             // 🔥 OPTIONAL: summary status
             'status' => $finding->status,
