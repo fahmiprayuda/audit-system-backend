@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
+use App\Services\AuditTrailService;
 use App\Http\Controllers\Controller;
 use App\Models\AuditProject;
 use App\Models\Company;
@@ -131,12 +132,19 @@ class AuditProjectController extends Controller
         // ===============================
         // GENERATE PROJECT CODE
         // ===============================
-        $count = AuditProject::whereYear('created_at', $year)
-            ->where('company_id', $company->id)
-            ->count() + 1;
+        $lastProject = AuditProject::where('company_id', $company->id)
+            ->whereYear('created_at', $year)
+            ->orderByDesc('id')
+            ->first();
 
-        $sequence = str_pad($count, 3, '0', STR_PAD_LEFT);
+        $nextSequence = 1;
 
+        if ($lastProject) {
+            $parts = explode('-', $lastProject->project_code);
+            $nextSequence = (int) end($parts) + 1;
+        }
+
+        $sequence = str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
         $projectCode = "AUD-{$companyCode}-{$year}-{$sequence}";
 
         // ===============================
@@ -159,6 +167,15 @@ class AuditProjectController extends Controller
             'release_date'   => $request->release_date,
             'created_by'   => auth()->id() ?? 1
         ]);
+
+        AuditTrailService::log(
+            'Project',
+            'Create',
+            $project->id,
+            "Created project {$project->project_code}",
+            null,
+            $project->toArray()
+        );
 
         return response()->json([
             'message' => 'Project created successfully',
@@ -188,11 +205,22 @@ class AuditProjectController extends Controller
             $name = $companyCode . ' - ' . $name;
         }
 
+        $oldValues = $project->toArray();
+
         $project->update([
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
             'release_date'   => $request->release_date,
         ]);
+
+        AuditTrailService::log(
+            'Project',
+            'Update',
+            $project->id,
+            "Updated project {$project->project_code}",
+            $oldValues,
+            $project->fresh()->toArray()
+        );
 
         return response()->json([
             'message' => 'Project updated successfully',
@@ -213,6 +241,17 @@ class AuditProjectController extends Controller
                 'message' => 'Project cannot be deleted because it already has findings.'
             ], 400);
         }
+
+        $oldValues = $project->toArray();
+
+        AuditTrailService::log(
+            'Project',
+            'Delete',
+            $project->id,
+            "Deleted project {$project->project_code}",
+            $oldValues,
+            null
+        );
 
         $project->delete();
 
