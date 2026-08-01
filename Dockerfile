@@ -1,37 +1,49 @@
-FROM dunglas/frankenphp:php8.2
+FROM dunglas/frankenphp:1-php8.2
 
 RUN install-php-extensions \
     pdo_mysql \
     mbstring \
-    tokenizer \
-    xml \
-    ctype \
-    fileinfo \
-    session \
-    dom \
-    curl
+    bcmath \
+    exif \
+    pcntl \
+    intl \
+    zip \
+    opcache
 
 WORKDIR /app
 
-COPY . .
-
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-RUN composer install --no-dev --optimize-autoloader
+# Install dependency PHP
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN npm install && npm run build
+# Install Node
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get update \
+    && apt-get install -y nodejs
 
-RUN mkdir -p storage/framework/cache \
-    storage/framework/sessions \
-    storage/framework/views \
+COPY package*.json ./
+RUN npm install
+
+# Copy source
+COPY . .
+
+# Build Vite
+RUN npm run build
+
+# Laravel cache
+RUN mkdir -p storage/framework/{cache,sessions,views,testing} \
     storage/logs \
     bootstrap/cache
 
 RUN chmod -R 775 storage bootstrap/cache
 
-EXPOSE 8000
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan event:cache
 
-CMD php artisan migrate --force && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan serve --host=0.0.0.0 --port=${PORT}
+EXPOSE 8080
+
+CMD ["frankenphp", "php-server", "--listen", ":8080", "--root", "public"]
