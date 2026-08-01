@@ -1,49 +1,70 @@
 FROM dunglas/frankenphp:1-php8.2
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    curl \
+    libicu-dev \
+    libzip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
 RUN install-php-extensions \
     pdo_mysql \
     mbstring \
     bcmath \
     exif \
-    pcntl \
     intl \
     zip \
     opcache
 
 WORKDIR /app
 
-# Composer
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install dependency PHP
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-
-# Install Node
+# Install Node.js 22
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get update \
     && apt-get install -y nodejs
 
-COPY package*.json ./
-RUN npm install
-
-# Copy source
+# Copy seluruh project
 COPY . .
 
-# Build Vite
+# Install PHP dependencies
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-interaction
+
+# Install Node dependencies
+RUN npm install
+
+# Build Vite assets
 RUN npm run build
 
-# Laravel cache
-RUN mkdir -p storage/framework/{cache,sessions,views,testing} \
+# Laravel directories
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/testing \
     storage/logs \
     bootstrap/cache
 
 RUN chmod -R 775 storage bootstrap/cache
 
+# Cache Laravel
+RUN php artisan package:discover --ansi
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan event:cache
+RUN php artisan view:cache
 
 EXPOSE 8080
 
-CMD ["frankenphp", "php-server", "--listen", ":8080", "--root", "public"]
+CMD ["frankenphp","php-server","--root","public","--listen",":8080"]
