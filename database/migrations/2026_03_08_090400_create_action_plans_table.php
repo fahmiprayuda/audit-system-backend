@@ -28,7 +28,7 @@ return new class extends Migration
                             'closed'
                         ])->default('need_further_review');
 
-                        $table->json('flags')->nullable();
+                        $table->text('flags')->nullable();
 
                         // Audit trail
 

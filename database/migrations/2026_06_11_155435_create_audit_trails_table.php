@@ -27,10 +27,10 @@ return new class extends Migration
 
             $table->text('description');
 
-            $table->json('old_values')
+            $table->text('old_values')
                 ->nullable();
 
-            $table->json('new_values')
+            $table->text('new_values')
                 ->nullable();
 
             $table->timestamps();
