@@ -56,14 +56,11 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache
 
+RUN chown -R www-data:www-data storage bootstrap/cache
 RUN chmod -R 775 storage bootstrap/cache
 
-# Cache Laravel
+# Hanya discover package
 RUN php artisan package:discover --ansi
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan event:cache
-RUN php artisan view:cache
 
 EXPOSE 8080
 
