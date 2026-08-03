@@ -15,21 +15,25 @@ return Application::configure(
     )
     ->withMiddleware(function ($middleware) {
 
-        $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-        ]);
+            $middleware->alias([
+                'role' => \App\Http\Middleware\RoleMiddleware::class,
+            ]);
 
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
+        })
+        ->withExceptions(function (Exceptions $exceptions): void {
+
         $exceptions->render(function (
             AuthenticationException $e,
             $request
         ) {
-            if ($request->is('api/*')) {
+
+            if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Unauthenticated',
+                    'message' => 'Unauthenticated'
                 ], 401);
             }
+
         });
+
     })
     ->create();
