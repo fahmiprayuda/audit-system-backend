@@ -12,9 +12,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             UserSeeder::class,
             AuditProjectSeeder::class,
-            FindingSeeder::class,
-            ActionPlanSeeder::class,
-            EvidenceSeeder::class,
+
         ]);
     }
 }
