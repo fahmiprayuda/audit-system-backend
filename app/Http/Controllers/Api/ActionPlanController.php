@@ -13,7 +13,7 @@ use App\Models\User;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
 use App\Models\ActionPlanExtension;
-use App\Models\actionPlanCommentAttachment;
+use App\Models\ActionPlanCommentAttachment;
 
 class ActionPlanController extends Controller
 {
