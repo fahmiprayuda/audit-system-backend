@@ -280,33 +280,31 @@ class ActionPlanMonitoringController extends Controller
 
                 break;
 
-            case "submitted":
+            case "need_further_review":
 
                 $query
-                    ->whereJsonContains(
-                        "flags",
-                        "submitted"
-                    );
+                    ->where("status", "need_further_review");
 
                 break;
 
-            case "revision_required":
+            case "open":
 
                 $query
-                    ->whereJsonContains(
-                        "flags",
-                        "revision_required"
-                    );
+                    ->where("status", "open");
+
+                break;
+
+            case "closed":
+
+                $query
+                    ->where("status", "closed");
 
                 break;
 
             case "on_site_validation":
 
                 $query
-                    ->whereJsonContains(
-                        "flags",
-                        "on_site_validation"
-                    );
+                    ->where("flags", "LIKE", "%on_site_validation%");
 
                 break;
         }
