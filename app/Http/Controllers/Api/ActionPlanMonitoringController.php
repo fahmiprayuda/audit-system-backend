@@ -270,6 +270,47 @@ class ActionPlanMonitoringController extends Controller
                 "findingDepartment.finding",
             ]);
 
+        // switch ($flag) {
+
+        //     case "overdue":
+
+        //         $query
+        //             ->whereDate("due_date", "<", today())
+        //             ->where("status", "!=", "closed");
+
+        //         break;
+
+        //     case "submitted":
+
+        //         $query
+        //             ->whereJsonContains(
+        //                 "flags",
+        //                 "submitted"
+        //             );
+
+        //         break;
+
+        //     case "revision_required":
+
+        //         $query
+        //             ->whereJsonContains(
+        //                 "flags",
+        //                 "revision_required"
+        //             );
+
+        //         break;
+
+        //     case "on_site_validation":
+
+        //         $query
+        //             ->whereJsonContains(
+        //                 "flags",
+        //                 "on_site_validation"
+        //             );
+
+        //         break;
+        // }
+
         switch ($flag) {
 
             case "overdue":
@@ -280,36 +321,46 @@ class ActionPlanMonitoringController extends Controller
 
                 break;
 
-            case "need_further_review":
+            // jangan ada whereJsonContains di sini lagi
+        }
 
-                $query
-                    ->where("status", "need_further_review");
+        $items = $query->get();
+
+        switch ($flag) {
+
+            case "submitted":
+
+                $items = $items->filter(function ($item) {
+                    return in_array(
+                        "submitted",
+                        $item->flags ?? []
+                    );
+                });
 
                 break;
 
-            case "open":
+            case "revision_required":
 
-                $query
-                    ->where("status", "open");
-
-                break;
-
-            case "closed":
-
-                $query
-                    ->where("status", "closed");
+                $items = $items->filter(function ($item) {
+                    return in_array(
+                        "revision_required",
+                        $item->flags ?? []
+                    );
+                });
 
                 break;
 
             case "on_site_validation":
 
-                $query
-                    ->where("flags", "LIKE", "%on_site_validation%");
+                $items = $items->filter(function ($item) {
+                    return in_array(
+                        "on_site_validation",
+                        $item->flags ?? []
+                    );
+                });
 
                 break;
         }
-
-        $items = $query->get();
 
         $departmentDistribution =
 
