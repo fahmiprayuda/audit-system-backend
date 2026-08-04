@@ -326,40 +326,14 @@ class ActionPlanMonitoringController extends Controller
 
         $items = $query->get();
 
-        switch ($flag) {
-
-            case "submitted":
-
-                $items = $items->filter(function ($item) {
-                    return in_array(
-                        "submitted",
-                        $item->flags ?? []
-                    );
-                });
-
-                break;
-
-            case "revision_required":
-
-                $items = $items->filter(function ($item) {
-                    return in_array(
-                        "revision_required",
-                        $item->flags ?? []
-                    );
-                });
-
-                break;
-
-            case "on_site_validation":
-
-                $items = $items->filter(function ($item) {
-                    return in_array(
-                        "on_site_validation",
-                        $item->flags ?? []
-                    );
-                });
-
-                break;
+        if (in_array($flag, [
+            "submitted",
+            "revision_required",
+            "on_site_validation"
+        ])) {
+            $items = $items
+                ->filter(fn($item) => in_array($flag, $item->flags ?? []))
+                ->values();
         }
 
         $departmentDistribution =
