@@ -119,7 +119,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware([
         'auth:sanctum',
-        'role:manager, auditor'
+        'role:manager,auditor'
         ])->group(function () {
 
         Route::apiResource('/users',UserController::class);
