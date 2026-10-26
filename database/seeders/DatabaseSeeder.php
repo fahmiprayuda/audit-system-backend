@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             UserSeeder::class,
             AuditProjectSeeder::class,
-
+            EnterpriseAuditSeeder::class,
         ]);
     }
 }

@@ -165,33 +165,36 @@ class ActionPlanMonitoringController extends Controller
 
         $departmentOverdue = Department::with([
             'findingDepartments.actionPlans'
-                ])
-                ->get()
-                ->map(function ($dept) {
+        ])
+        ->get()
+        ->map(function ($dept) {
 
-                    $count =
-                        $dept->findingDepartments
-                            ->flatMap->actionPlans
-                            ->filter(fn($ap) =>
-                                $ap->status !== 'closed'
-                                &&
-                                $ap->due_date
-                                &&
-                                $ap->due_date->isPast()
-                            )
-                            ->count();
+            $count =
+                $dept->findingDepartments
+                    ->flatMap->actionPlans
+                    ->filter(fn($ap) =>
+                        $ap->status !== 'closed'
+                        &&
+                        $ap->due_date
+                        &&
+                        $ap->due_date->isPast()
+                    )
+                    ->count();
 
-                    return [
-                        'department' => $dept->name,
-                        'count' => $count,
-                    ];
-                })
-
-                ->filter(fn ($item) =>
-                    $item['count'] > 0)
-                    
-                ->sortByDesc('count')
-                ->values();
+            return [
+                'department' => $dept->name,
+                'count' => $count,
+            ];
+        })
+        ->groupBy('department')
+        ->map(fn ($group, $name) => [
+            'department' => $name,
+            'count' => $group->sum('count'),
+        ])
+        ->filter(fn ($item) =>
+            $item['count'] > 0)
+        ->sortByDesc('count')
+        ->values();
 
 
         $extensionSummary = [
