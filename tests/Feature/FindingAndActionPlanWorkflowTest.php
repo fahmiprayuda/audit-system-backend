@@ -95,6 +95,32 @@ class FindingAndActionPlanWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_auditor_can_create_finding_with_default_risk_rating_when_omitted(): void
+    {
+        $response = $this->actingAs($this->auditor, 'sanctum')
+            ->postJson('/api/findings', [
+                'audit_project_id' => $this->project->id,
+                'title' => 'Lack of Dual Approval in Wire Transfer',
+                'description' => 'Transfer above $10k only requires 1 approval.',
+                'departments' => [$this->dept->id],
+                'action_plans' => [
+                    [
+                        'department_id' => $this->dept->id,
+                        'corrective_action' => 'Enforce multi-sig authorization in core banking',
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('findings', [
+            'audit_project_id' => $this->project->id,
+            'title' => 'Lack of Dual Approval in Wire Transfer',
+            'risk_rating' => 'Moderate',
+            'risk_category' => 'Moderate',
+        ]);
+    }
+
     public function test_auditee_can_submit_action_plan_comment_and_trigger_submitted_flag(): void
     {
         $finding = Finding::create([

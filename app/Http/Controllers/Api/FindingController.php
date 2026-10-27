@@ -334,14 +334,16 @@ CREATE
             // ===============================
             // CREATE FINDING
             // ===============================
+            $riskRating = $request->risk_rating ?? 'Moderate';
+
             $finding = Finding::create([
                 'audit_project_id' => $request->audit_project_id,
                 'finding_code' => $findingCode,
                 'title' => $request->title,
                 'description' => $request->description ?? '',
-                'risk_rating' => $request->risk_rating,
+                'risk_rating' => $riskRating,
 
-                'risk_category' => in_array($request->risk_rating, ['Extreme', 'Major'])
+                'risk_category' => in_array($riskRating, ['Extreme', 'Major'])
                     ? 'Significant' : 'Moderate',
                 
                 'created_by' => auth()->id() ?? 1,
