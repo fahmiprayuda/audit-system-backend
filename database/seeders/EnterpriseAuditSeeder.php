@@ -55,9 +55,10 @@ class EnterpriseAuditSeeder extends Seeder
         $manager = User::updateOrCreate(
             ['email' => 'manager@audit.com'],
             [
-                'name' => 'Audrey Kurniawan (Audit Head)',
+                'name' => 'Audrey Kurniawan',
                 'password' => Hash::make('password'),
                 'role' => 'manager',
+                'level' => 'Audit Head',
                 'department_id' => null,
             ]
         );
@@ -65,9 +66,10 @@ class EnterpriseAuditSeeder extends Seeder
         $auditor = User::updateOrCreate(
             ['email' => 'auditor@audit.com'],
             [
-                'name' => 'Rian Pratama (Senior Auditor)',
+                'name' => 'Rian Pratama',
                 'password' => Hash::make('password'),
                 'role' => 'auditor',
+                'level' => 'Senior Auditor',
                 'department_id' => null,
             ]
         );
@@ -75,9 +77,10 @@ class EnterpriseAuditSeeder extends Seeder
         $auditeeIT = User::updateOrCreate(
             ['email' => 'auditee@audit.com'],
             [
-                'name' => 'Budi Santoso (IT Lead)',
+                'name' => 'Budi Santoso',
                 'password' => Hash::make('password'),
                 'role' => 'auditee',
+                'level' => 'IT Lead',
                 'department_id' => $deptModels['IT']->id,
             ]
         );
@@ -85,9 +88,10 @@ class EnterpriseAuditSeeder extends Seeder
         $auditeeFin = User::updateOrCreate(
             ['email' => 'auditee.fin@audit.com'],
             [
-                'name' => 'Dewi Lestari (Finance Manager)',
+                'name' => 'Dewi Lestari',
                 'password' => Hash::make('password'),
                 'role' => 'auditee',
+                'level' => 'Finance Manager',
                 'department_id' => $deptModels['FIN']->id,
             ]
         );
@@ -95,9 +99,10 @@ class EnterpriseAuditSeeder extends Seeder
         $auditeeScm = User::updateOrCreate(
             ['email' => 'auditee.scm@audit.com'],
             [
-                'name' => 'Hendra Wijaya (SCM Manager)',
+                'name' => 'Hendra Wijaya',
                 'password' => Hash::make('password'),
                 'role' => 'auditee',
+                'level' => 'SCM Manager',
                 'department_id' => $deptModels['SCM']->id,
             ]
         );
@@ -107,8 +112,9 @@ class EnterpriseAuditSeeder extends Seeder
             ['email' => 'fahmi@manager.local'],
             [
                 'name' => 'Fahmi Prayuda',
-                'password' => Hash::make('fahmi123'),
+                'password' => Hash::make('password'),
                 'role' => 'manager',
+                'level' => 'Audit Head',
                 'department_id' => null,
             ]
         );
@@ -116,8 +122,9 @@ class EnterpriseAuditSeeder extends Seeder
             ['email' => 'aulia@auditor.local'],
             [
                 'name' => 'Aulia',
-                'password' => Hash::make('aulia123'),
+                'password' => Hash::make('password'),
                 'role' => 'auditor',
+                'level' => 'Senior Auditor',
                 'department_id' => null,
             ]
         );
@@ -125,8 +132,9 @@ class EnterpriseAuditSeeder extends Seeder
             ['email' => 'shavazia@auditee.local'],
             [
                 'name' => 'Shavazia',
-                'password' => Hash::make('shavazia123'),
+                'password' => Hash::make('password'),
                 'role' => 'auditee',
+                'level' => 'Staff',
                 'department_id' => $deptModels['IT']->id,
             ]
         );

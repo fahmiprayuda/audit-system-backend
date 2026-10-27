@@ -22,6 +22,7 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'level' => $user->level,
                 'department_id' => $user->department_id,
                 'department' => $user->department
                     ? [
@@ -46,6 +47,7 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'role' => 'required|in:manager,auditor,auditee',
+            'level' => 'nullable|string|max:100',
             'department_id' => [
                 'nullable',
                 'exists:departments,id'
@@ -70,6 +72,7 @@ class UserController extends Controller
                 $request->password
             ),
             'role' => $request->role,
+            'level' => $request->level,
             'department_id' =>
                 $request->role === 'auditee'
                     ? $request->department_id
@@ -83,6 +86,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => "required|email|unique:users,email,$id",
             'role' => 'required|in:manager,auditor,auditee',
+            'level' => 'nullable|string|max:100',
             'department_id' => [
                 'nullable',
                 'exists:departments,id'
@@ -106,6 +110,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'level' => $request->level,
             'department_id' =>
                 $request->role === 'auditee'
                     ? $request->department_id

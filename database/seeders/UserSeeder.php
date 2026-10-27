@@ -35,6 +35,7 @@ class UserSeeder extends Seeder
                 'name' => 'Fahmi Prayuda',
                 'password' => Hash::make('password'),
                 'role' => 'manager',
+                'level' => 'Audit Head',
                 "department_id"=> null,
             ]
         );
@@ -47,6 +48,7 @@ class UserSeeder extends Seeder
                 'name' => 'Aulia',
                 'password' => Hash::make('password'),
                 'role' => 'auditor',
+                'level' => 'Senior Auditor',
                 "department_id"=> null,
             ]
         );        
