@@ -154,5 +154,22 @@ class NotificationService
         }
     }
 
+    public static function projectLeadAssigned(\App\Models\AuditProject $project, User $lead, ?User $assigner = null)
+    {
+        $assignerName = $assigner ? $assigner->name : 'Sistem';
+
+        $message = ($assigner && $assigner->id !== $lead->id)
+            ? "Halo {$lead->name}, Anda telah ditugaskan sebagai Lead Auditor untuk project \"{$project->project_name}\" ({$project->project_code}) oleh {$assignerName}."
+            : "Project \"{$project->project_name}\" ({$project->project_code}) berhasil dibuat dengan Anda sebagai Lead Auditor.";
+
+        self::create(
+            $lead->id,
+            'project_lead_assigned',
+            'Penugasan Lead Auditor',
+            $message,
+            "/projects/{$project->id}"
+        );
+    }
+
 
 }

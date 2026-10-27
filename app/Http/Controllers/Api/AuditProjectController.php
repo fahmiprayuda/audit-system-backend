@@ -170,6 +170,10 @@ class AuditProjectController extends Controller
             'created_by'   => $request->created_by ?? auth()->id() ?? 1
         ]);
 
+        if ($project->creator) {
+            \App\Services\NotificationService::projectLeadAssigned($project, $project->creator, auth()->user());
+        }
+
         AuditTrailService::log(
             'Project',
             'Create',
@@ -220,6 +224,11 @@ class AuditProjectController extends Controller
         }
 
         $project->update($updateData);
+
+        $oldCreatedBy = $oldValues['created_by'] ?? null;
+        if ($request->filled('created_by') && $request->created_by != $oldCreatedBy && $project->creator) {
+            \App\Services\NotificationService::projectLeadAssigned($project, $project->creator, auth()->user());
+        }
 
         AuditTrailService::log(
             'Project',

@@ -85,4 +85,33 @@ class AuditProjectApiTest extends TestCase
 
         $this->assertCount(1, $response->json('data'));
     }
+
+    public function test_assigning_lead_auditor_sends_notification_to_lead(): void
+    {
+        $creator = User::factory()->create(['name' => 'Fahmi Auditor', 'role' => 'auditor']);
+        $lead = User::factory()->create(['name' => 'Aulia Lead', 'role' => 'auditor']);
+        $company = Company::create([
+            'code' => 'ACM',
+            'name' => 'Acme Corporation',
+        ]);
+
+        $response = $this->actingAs($creator, 'sanctum')
+            ->postJson('/api/projects', [
+                'company_id' => $company->id,
+                'project_name' => 'Annual Supply Chain Review',
+                'release_date' => '2026-03-01',
+                'created_by' => $lead->id,
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $lead->id,
+            'type' => 'project_lead_assigned',
+        ]);
+
+        $notif = \App\Models\Notification::where('user_id', $lead->id)->first();
+        $this->assertStringContainsString('Fahmi Auditor', $notif->message);
+        $this->assertStringContainsString('Annual Supply Chain Review', $notif->message);
+    }
 }
