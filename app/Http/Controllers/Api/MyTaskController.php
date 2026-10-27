@@ -9,9 +9,9 @@ use Illuminate\Http\Request;
 
 class MyTaskController extends Controller
 {
-    public function index( Request $request)
+    public function index(Request $request)
     {
-        $user = auth()->user()->load('department');
+        $user = auth()->user()->load('department.company');
 
         if (!$user->department_id) {
             return response()->json([
@@ -19,12 +19,11 @@ class MyTaskController extends Controller
             ], 400);
         }
 
-        $request->validate(['queue' => 'nullable|in:new,waiting,revision,site,overdue,closed']);
-
+        $request->validate(['queue' => 'nullable|in:all,new,waiting,revision,site,overdue,closed']);
 
         $query = ActionPlan::with([
-            'findingDepartment.department',
-            'findingDepartment.finding'
+            'findingDepartment.department.company',
+            'findingDepartment.finding.project'
         ])
         ->where('status', '!=', 'closed')
         ->whereHas('findingDepartment', function ($q) use ($user) {
@@ -36,12 +35,12 @@ class MyTaskController extends Controller
                 ->latest()
                 ->get()
                 ->reject(fn ($task) => $task->status === 'closed')
-                ->values();;
+                ->values();
 
         // Task yang ditampilkan pada table //
         $tasks = $allTasks;
 
-        if ($request->filled('queue')) {
+        if ($request->filled('queue') && $request->queue !== 'all') {
             $tasks = $tasks
                 ->filter(fn ($task) =>
                     $task->queue === $request->queue
@@ -50,30 +49,41 @@ class MyTaskController extends Controller
         }
 
         $summary = [
-                'all'       => $allTasks->count(),
-                'new'       => $allTasks->where('queue', 'new')->count(),
-                'waiting'   => $allTasks->where('queue', 'waiting')->count(),
-                'revision'  => $allTasks->where('queue', 'revision')->count(),
-                'site'      => $allTasks->where('queue', 'site')->count(),
-                'overdue'   => $allTasks->where('queue', 'overdue')->count(),
-            ];
-
+            'all'       => $allTasks->count(),
+            'new'       => $allTasks->where('queue', 'new')->count(),
+            'revision'  => $allTasks->where('queue', 'revision')->count(),
+            'waiting'   => $allTasks->where('queue', 'waiting')->count(),
+            'site'      => $allTasks->where('queue', 'site')->count(),
+            'overdue'   => $allTasks->where('queue', 'overdue')->count(),
+        ];
 
         return response()->json([
+            'company' => $user->department?->company ? [
+                'id' => $user->department->company->id,
+                'name' => $user->department->company->name,
+                'code' => $user->department->company->code,
+            ] : null,
+
             'department' => [
                 'id' => $user->department->id,
                 'name' => $user->department->name,
+                'code' => $user->department->code,
             ],
 
             'summary' => $summary,
 
             'tasks' => $tasks->map(function ($task) {
+                $finding = $task->findingDepartment?->finding;
                 return [
                     'id' => $task->id,
-                    'finding_id' => $task->findingDepartment->finding->id,
-                    'finding_code' => $task->findingDepartment->finding->finding_code,
-                    'finding_department_id' => $task->findingDepartment->id,
-                    'title' => $task->findingDepartment->finding->title,
+                    'finding_id' => $finding?->id,
+                    'finding_code' => $finding?->finding_code,
+                    'finding_department_id' => $task->findingDepartment?->id,
+                    'title' => $finding?->title,
+                    'risk_rating' => $finding?->risk_rating ?? 'Moderate',
+                    'risk_category' => $finding?->risk_category ?? 'Moderate',
+                    'project_name' => $finding?->project?->project_name,
+                    'project_code' => $finding?->project?->project_code,
                     'root_cause' => $task->root_cause,
                     'corrective_action' => $task->corrective_action,
                     'status' => $task->status,

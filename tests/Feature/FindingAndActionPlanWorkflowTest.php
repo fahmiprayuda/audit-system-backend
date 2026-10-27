@@ -199,4 +199,48 @@ class FindingAndActionPlanWorkflowTest extends TestCase
         $this->assertNotNull($ap->closed_at);
         $this->assertEquals($this->auditor->id, $ap->closed_by);
     }
+
+    public function test_auditee_can_fetch_my_tasks_with_company_and_department(): void
+    {
+        $finding = Finding::create([
+            'audit_project_id' => $this->project->id,
+            'finding_code' => 'FND-CORP-2026-099',
+            'title' => 'Pending Auditee Action',
+            'risk_rating' => 'Major',
+            'risk_category' => 'Significant',
+            'created_by' => $this->auditor->id,
+            'status' => 'open',
+        ]);
+
+        $fd = FindingDepartment::create([
+            'finding_id' => $finding->id,
+            'department_id' => $this->dept->id,
+            'status' => 'open',
+        ]);
+
+        ActionPlan::create([
+            'finding_department_id' => $fd->id,
+            'root_cause' => 'Misconfigured permissions',
+            'corrective_action' => 'Apply principle of least privilege',
+            'status' => 'open',
+            'due_date' => now()->addDays(10),
+        ]);
+
+        $response = $this->actingAs($this->auditee, 'sanctum')
+            ->getJson('/api/my-tasks');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'company' => ['id', 'name', 'code'],
+                'department' => ['id', 'name', 'code'],
+                'summary' => ['all', 'new', 'revision', 'waiting', 'site', 'overdue'],
+                'tasks',
+            ]);
+
+        $this->assertEquals('Corporate Indonesia', $response->json('company.name'));
+        $this->assertEquals('IT Department', $response->json('department.name'));
+        $this->assertEquals(1, $response->json('summary.all'));
+        $this->assertEquals('Major', $response->json('tasks.0.risk_rating'));
+        $this->assertEquals('CORP - Annual IT Audit', $response->json('tasks.0.project_name'));
+    }
 }

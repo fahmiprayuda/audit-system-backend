@@ -54,7 +54,7 @@ class AuthController extends Controller
     public function profile()
     {
         return auth()->user()
-            ->load('department');
+            ->load('department.company');
     }
     
     public function updateProfile(Request $request)
