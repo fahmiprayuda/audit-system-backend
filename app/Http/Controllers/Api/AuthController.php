@@ -16,14 +16,17 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        $email = trim(strtolower($request->email));
+
         $user = User::with('department')
-        ->where('email', $request->email)
-        ->first();
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
 
         if (! $user || ! Hash::check(
             $request->password,
             $user->password
         )) {
+            \Illuminate\Support\Facades\Log::warning("Login failed for email: {$request->email}. User found: " . ($user ? 'yes' : 'no'));
             return response()->json([
                 'message' => 'Invalid credentials',
             ], 401);

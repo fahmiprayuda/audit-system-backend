@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'name' => 'Fahmi Prayuda',
-                'password' => Hash::make('fahmi123'),
+                'password' => Hash::make('password'),
                 'role' => 'manager',
                 "department_id"=> null,
             ]
@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'name' => 'Aulia',
-                'password' => Hash::make('aulia123'),
+                'password' => Hash::make('password'),
                 'role' => 'auditor',
                 "department_id"=> null,
             ]
@@ -57,7 +57,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'name' => 'Shavazia',
-                'password' => Hash::make('shavazia123'),
+                'password' => Hash::make('password'),
                 'role' => 'auditee',
                 "department_id"=> $it->id,
             ]
