@@ -51,93 +51,71 @@ class EnterpriseAuditSeeder extends Seeder
             );
         }
 
-        // 3. CREATE / UPDATE USERS
-        $manager = User::updateOrCreate(
-            ['email' => 'manager@audit.com'],
-            [
-                'name' => 'Audrey Kurniawan',
-                'password' => Hash::make('password'),
-                'role' => 'manager',
-                'level' => 'Audit Head',
-                'department_id' => null,
-            ]
-        );
+        // 3. CREATE / UPDATE USERS SAFELY WITH SOFT DELETES
+        $manager = $this->upsertUser('manager@audit.com', [
+            'name' => 'Audrey Kurniawan',
+            'password' => Hash::make('password'),
+            'role' => 'manager',
+            'level' => 'Audit Head',
+            'department_id' => null,
+        ]);
 
-        $auditor = User::updateOrCreate(
-            ['email' => 'auditor@audit.com'],
-            [
-                'name' => 'Rian Pratama',
-                'password' => Hash::make('password'),
-                'role' => 'auditor',
-                'level' => 'Senior Auditor',
-                'department_id' => null,
-            ]
-        );
+        $auditor = $this->upsertUser('auditor@audit.com', [
+            'name' => 'Rian Pratama',
+            'password' => Hash::make('password'),
+            'role' => 'auditor',
+            'level' => 'Senior Auditor',
+            'department_id' => null,
+        ]);
 
-        $auditeeIT = User::updateOrCreate(
-            ['email' => 'auditee@audit.com'],
-            [
-                'name' => 'Budi Santoso',
-                'password' => Hash::make('password'),
-                'role' => 'auditee',
-                'level' => 'IT Lead',
-                'department_id' => $deptModels['IT']->id,
-            ]
-        );
+        $auditeeIT = $this->upsertUser('auditee@audit.com', [
+            'name' => 'Budi Santoso',
+            'password' => Hash::make('password'),
+            'role' => 'auditee',
+            'level' => 'IT Lead',
+            'department_id' => $deptModels['IT']->id,
+        ]);
 
-        $auditeeFin = User::updateOrCreate(
-            ['email' => 'auditee.fin@audit.com'],
-            [
-                'name' => 'Dewi Lestari',
-                'password' => Hash::make('password'),
-                'role' => 'auditee',
-                'level' => 'Finance Manager',
-                'department_id' => $deptModels['FIN']->id,
-            ]
-        );
+        $auditeeFin = $this->upsertUser('auditee.fin@audit.com', [
+            'name' => 'Dewi Lestari',
+            'password' => Hash::make('password'),
+            'role' => 'auditee',
+            'level' => 'Finance Manager',
+            'department_id' => $deptModels['FIN']->id,
+        ]);
 
-        $auditeeScm = User::updateOrCreate(
-            ['email' => 'auditee.scm@audit.com'],
-            [
-                'name' => 'Hendra Wijaya',
-                'password' => Hash::make('password'),
-                'role' => 'auditee',
-                'level' => 'SCM Manager',
-                'department_id' => $deptModels['SCM']->id,
-            ]
-        );
+        $auditeeScm = $this->upsertUser('auditee.scm@audit.com', [
+            'name' => 'Hendra Wijaya',
+            'password' => Hash::make('password'),
+            'role' => 'auditee',
+            'level' => 'SCM Manager',
+            'department_id' => $deptModels['SCM']->id,
+        ]);
 
         // Also ensure original test users exist
-        User::updateOrCreate(
-            ['email' => 'fahmi@manager.local'],
-            [
-                'name' => 'Fahmi Prayuda',
-                'password' => Hash::make('password'),
-                'role' => 'manager',
-                'level' => 'Audit Head',
-                'department_id' => null,
-            ]
-        );
-        User::updateOrCreate(
-            ['email' => 'aulia@auditor.local'],
-            [
-                'name' => 'Aulia',
-                'password' => Hash::make('password'),
-                'role' => 'auditor',
-                'level' => 'Senior Auditor',
-                'department_id' => null,
-            ]
-        );
-        User::updateOrCreate(
-            ['email' => 'shavazia@auditee.local'],
-            [
-                'name' => 'Shavazia',
-                'password' => Hash::make('password'),
-                'role' => 'auditee',
-                'level' => 'Staff',
-                'department_id' => $deptModels['IT']->id,
-            ]
-        );
+        $this->upsertUser('fahmi@manager.local', [
+            'name' => 'Fahmi Prayuda',
+            'password' => Hash::make('password'),
+            'role' => 'manager',
+            'level' => 'Audit Head',
+            'department_id' => null,
+        ]);
+
+        $this->upsertUser('aulia@auditor.local', [
+            'name' => 'Aulia',
+            'password' => Hash::make('password'),
+            'role' => 'auditor',
+            'level' => 'Senior Auditor',
+            'department_id' => null,
+        ]);
+
+        $this->upsertUser('shavazia@auditee.local', [
+            'name' => 'Shavazia',
+            'password' => Hash::make('password'),
+            'role' => 'auditee',
+            'level' => 'Staff',
+            'department_id' => $deptModels['IT']->id,
+        ]);
 
         // 4. AUDIT PROJECTS
         $project1 = AuditProject::updateOrCreate(
@@ -411,5 +389,21 @@ class EnterpriseAuditSeeder extends Seeder
             'url' => '/findings/' . $f2->id,
             'read_at' => null,
         ]);
+    }
+
+    private function upsertUser(string $email, array $attributes): User
+    {
+        $user = User::withTrashed()->where('email', $email)->first();
+
+        if ($user) {
+            $user->fill($attributes);
+            $user->deleted_at = null; // ensure active/restored
+            $user->save();
+            return $user;
+        }
+
+        return User::create(array_merge($attributes, [
+            'email' => $email,
+        ]));
     }
 }

@@ -27,43 +27,44 @@ class UserSeeder extends Seeder
             ->where("code", "FIN")
             ->first();
     
-        User::updateOrCreate(
-            [
-                "email"=>"fahmi@manager.local"
-            ],
-            [
-                'name' => 'Fahmi Prayuda',
-                'password' => Hash::make('password'),
-                'role' => 'manager',
-                'level' => 'Audit Head',
-                "department_id"=> null,
-            ]
-        );
+        $this->upsertUser('fahmi@manager.local', [
+            'name' => 'Fahmi Prayuda',
+            'password' => Hash::make('password'),
+            'role' => 'manager',
+            'level' => 'Audit Head',
+            'department_id' => null,
+        ]);
 
-        User::updateOrCreate(
-            [
-                "email"=>"aulia@auditor.local"
-            ],
-            [
-                'name' => 'Aulia',
-                'password' => Hash::make('password'),
-                'role' => 'auditor',
-                'level' => 'Senior Auditor',
-                "department_id"=> null,
-            ]
-        );        
+        $this->upsertUser('aulia@auditor.local', [
+            'name' => 'Aulia',
+            'password' => Hash::make('password'),
+            'role' => 'auditor',
+            'level' => 'Senior Auditor',
+            'department_id' => null,
+        ]);
 
-        User::updateOrCreate(
-            [
-                "email"=>"shavazia@auditee.local"
-            ],
-            [
-                'name' => 'Shavazia',
-                'password' => Hash::make('password'),
-                'role' => 'auditee',
-                "department_id"=> $it->id,
-            ]
-        );
+        $this->upsertUser('shavazia@auditee.local', [
+            'name' => 'Shavazia',
+            'password' => Hash::make('password'),
+            'role' => 'auditee',
+            'level' => 'Staff',
+            'department_id' => $it?->id,
+        ]);
     }
-    
+
+    private function upsertUser(string $email, array $attributes): User
+    {
+        $user = User::withTrashed()->where('email', $email)->first();
+
+        if ($user) {
+            $user->fill($attributes);
+            $user->deleted_at = null;
+            $user->save();
+            return $user;
+        }
+
+        return User::create(array_merge($attributes, [
+            'email' => $email,
+        ]));
+    }
 }  
