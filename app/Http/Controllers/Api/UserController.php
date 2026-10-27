@@ -122,11 +122,19 @@ class UserController extends Controller
 
     public function destroy($id)
     {
-        User::destroy($id);
+        $user = User::findOrFail($id);
 
-        return [
-            'message' => 'Deleted'
-        ];
+        if (auth()->id() === $user->id) {
+            return response()->json([
+                'message' => 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan.'
+            ], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'message' => 'User berhasil dihapus'
+        ]);
     }
 
     public function resetPassword(

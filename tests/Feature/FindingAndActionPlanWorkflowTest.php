@@ -243,4 +243,44 @@ class FindingAndActionPlanWorkflowTest extends TestCase
         $this->assertEquals('Major', $response->json('tasks.0.risk_rating'));
         $this->assertEquals('CORP - Annual IT Audit', $response->json('tasks.0.project_name'));
     }
+
+    public function test_user_with_action_plans_can_be_safely_deleted(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager']);
+
+        $finding = Finding::create([
+            'audit_project_id' => $this->project->id,
+            'finding_code' => 'FND-CORP-2026-888',
+            'title' => 'Test Safe Delete',
+            'risk_rating' => 'Moderate',
+            'risk_category' => 'Moderate',
+            'created_by' => $this->auditor->id,
+            'status' => 'open',
+        ]);
+
+        $fd = FindingDepartment::create([
+            'finding_id' => $finding->id,
+            'department_id' => $this->dept->id,
+            'status' => 'open',
+        ]);
+
+        $ap = ActionPlan::create([
+            'finding_department_id' => $fd->id,
+            'corrective_action' => 'Fix it safely',
+            'status' => 'open',
+            'submitted_by' => $this->auditee->id,
+        ]);
+
+        $response = $this->actingAs($manager, 'sanctum')
+            ->deleteJson("/api/users/{$this->auditee->id}");
+
+        $response->assertStatus(200)
+            ->assertJson(['message' => 'User berhasil dihapus']);
+
+        $this->assertSoftDeleted('users', ['id' => $this->auditee->id]);
+
+        $ap->refresh();
+        $this->assertNotNull($ap->submittedBy);
+        $this->assertEquals($this->auditee->name, $ap->submittedBy->name);
+    }
 }
