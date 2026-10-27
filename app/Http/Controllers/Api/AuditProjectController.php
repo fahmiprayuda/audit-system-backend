@@ -166,8 +166,8 @@ class AuditProjectController extends Controller
             'company_id'   => $request->company_id,
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
-            'release_date'   => $request->release_date,
-            'created_by'   => auth()->id() ?? 1
+            'release_date' => $request->release_date,
+            'created_by'   => $request->created_by ?? auth()->id() ?? 1
         ]);
 
         AuditTrailService::log(
@@ -193,7 +193,8 @@ class AuditProjectController extends Controller
         $request->validate([
             'project_name' => 'required|string|max:255',
             'audit_type'   => 'nullable|string|max:255',
-            'release_date'   => 'nullable|date',
+            'release_date' => 'nullable|date',
+            'created_by'   => 'nullable|exists:users,id',
         ]);
 
         $project = AuditProject::findOrFail($id);
@@ -209,11 +210,16 @@ class AuditProjectController extends Controller
 
         $oldValues = $project->toArray();
 
-        $project->update([
+        $updateData = [
             'project_name' => $name,
             'audit_type'   => $request->audit_type,
-            'release_date'   => $request->release_date,
-        ]);
+            'release_date' => $request->release_date,
+        ];
+        if ($request->filled('created_by')) {
+            $updateData['created_by'] = $request->created_by;
+        }
+
+        $project->update($updateData);
 
         AuditTrailService::log(
             'Project',

@@ -17,6 +17,7 @@ class StoreProjectRequest extends FormRequest
             'company_id' => ['required', 'exists:companies,id'],
             'project_name' => ['required', 'string', 'max:255'],
             'release_date' => ['nullable', 'date'],
+            'created_by' => ['nullable', 'exists:users,id'],
         ];
     }
 }
