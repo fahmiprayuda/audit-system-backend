@@ -134,20 +134,23 @@ class AuditProjectController extends Controller
         // ===============================
         // GENERATE PROJECT CODE
         // ===============================
-        $lastProject = AuditProject::where('company_id', $company->id)
-            ->whereYear('created_at', $year)
-            ->orderByDesc('id')
-            ->first();
+        $prefix = "AUD-{$companyCode}-{$year}-";
 
-        $nextSequence = 1;
+        $existingNumbers = AuditProject::where('project_code', 'like', "{$prefix}%")
+            ->pluck('project_code')
+            ->map(function ($code) use ($prefix) {
+                $suffix = substr($code, strlen($prefix));
+                return is_numeric($suffix) ? (int) $suffix : 0;
+            });
 
-        if ($lastProject) {
-            $parts = explode('-', $lastProject->project_code);
-            $nextSequence = (int) end($parts) + 1;
-        }
+        $maxNumber = $existingNumbers->max() ?? 0;
+        $nextSequence = $maxNumber + 1;
 
-        $sequence = str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
-        $projectCode = "AUD-{$companyCode}-{$year}-{$sequence}";
+        do {
+            $sequence = str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+            $projectCode = "{$prefix}{$sequence}";
+            $nextSequence++;
+        } while (AuditProject::where('project_code', $projectCode)->exists());
 
         // ===============================
         // FIX PROJECT NAME (AUTO PREFIX)

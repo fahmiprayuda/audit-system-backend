@@ -114,4 +114,56 @@ class AuditProjectApiTest extends TestCase
         $this->assertStringContainsString('Fahmi Auditor', $notif->message);
         $this->assertStringContainsString('Annual Supply Chain Review', $notif->message);
     }
+
+    public function test_create_project_avoids_duplicate_code_when_existing_projects_and_custom_suffixes_exist(): void
+    {
+        $creator = User::factory()->create(['role' => 'manager']);
+        $company = Company::create([
+            'code' => 'FFS',
+            'name' => 'FKS Food Sejahtera',
+        ]);
+
+        $year = now()->year;
+
+        // Simulate seeded data
+        AuditProject::create([
+            'project_code' => "AUD-FFS-{$year}-001",
+            'company_id' => $company->id,
+            'project_name' => 'FFS - Existing Project 1',
+            'status' => 'open',
+            'created_by' => $creator->id,
+        ]);
+
+        AuditProject::create([
+            'project_code' => "AUD-FFS-{$year}-002",
+            'company_id' => $company->id,
+            'project_name' => 'FFS - Existing Project 2',
+            'status' => 'open',
+            'created_by' => $creator->id,
+        ]);
+
+        // Non-numeric suffix like Q4
+        AuditProject::create([
+            'project_code' => "AUD-FFS-2025-Q4",
+            'company_id' => $company->id,
+            'project_name' => 'FFS - Q4 Project',
+            'status' => 'closed',
+            'created_by' => $creator->id,
+        ]);
+
+        $response = $this->actingAs($creator, 'sanctum')
+            ->postJson('/api/projects', [
+                'company_id' => $company->id,
+                'project_name' => 'Percobaan Saja Ini',
+                'release_date' => '2026-10-27',
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('audit_projects', [
+            'company_id' => $company->id,
+            'project_name' => 'FFS - Percobaan Saja Ini',
+            'project_code' => "AUD-FFS-{$year}-003",
+        ]);
+    }
 }
