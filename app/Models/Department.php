@@ -31,4 +31,9 @@ class Department extends Model
             FindingDepartment::class
         );
     }
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 }

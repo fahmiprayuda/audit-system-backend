@@ -31,6 +31,16 @@ class ActionPlan extends Model
         return $this->belongsTo(FindingDepartment::class);
     }
 
+    public function submittedBy()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function closedBy()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
     public function verifications()
     {
         return $this->hasMany(Verification::class);

@@ -20,7 +20,7 @@ class AuditProjectController extends Controller
     {
         $perPage = $request->get('per_page', 10);
 
-        $projects = AuditProject::with('company')
+        $projects = AuditProject::with(['company', 'creator:id,name,email,role'])
             ->latest()
             ->paginate($perPage);
 
@@ -32,7 +32,9 @@ class AuditProjectController extends Controller
         /// Anak viva
         $project = \App\Models\AuditProject::with([
             'company',
+            'creator:id,name,email,role',
             'company.departments', 
+            'findings.creator:id,name,email,role',
             'findings.findingDepartments.department',
             'findings.findingDepartments.actionPlans'
         ])->findOrFail($id);
@@ -64,6 +66,11 @@ class AuditProjectController extends Controller
                 'risk_rating' => $finding->risk_rating,
                 'risk_category' => $finding->risk_category,
                 'status' => $finding->status,
+                'creator' => $finding->creator ? [
+                    'id' => $finding->creator->id,
+                    'name' => $finding->creator->name,
+                    'role' => $finding->creator->role,
+                ] : null,
 
                 'departments' => $finding->findingDepartments->map(function ($fd) {
                     return [

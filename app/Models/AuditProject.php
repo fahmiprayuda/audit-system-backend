@@ -43,6 +43,11 @@ class AuditProject extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function findings()
     {
         return $this->hasMany(Finding::class,'audit_project_id');

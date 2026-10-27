@@ -43,10 +43,15 @@ GET ALL FINDINGS
     public function index(Request $request)
     {
         $query = Finding::with([
-            'project:id,project_code,company_id',
+            'creator:id,name,email,role',
+            'project:id,project_code,company_id,created_by',
+            'project.creator:id,name,email,role',
             'project.company',
             'findingDepartments.department',
-            'findingDepartments.actionPlans'
+            'findingDepartments.department.users:id,name,email,role,department_id',
+            'findingDepartments.actionPlans',
+            'findingDepartments.actionPlans.submittedBy:id,name,email,role',
+            'findingDepartments.actionPlans.closedBy:id,name,email,role'
         ]);
 
         // SEARCH
@@ -132,9 +137,12 @@ SHOW DETAIL
         $this->authorizeAuditee($id);   
 
         $finding = Finding::with([
+            'creator:id,name,email,role',
+            'project.creator:id,name,email,role',
             'project.company.departments',
-            'findingDepartments.department',
-            'findingDepartments.actionPlans',
+            'findingDepartments.department.users:id,name,email,role,department_id',
+            'findingDepartments.actionPlans.submittedBy:id,name,email,role',
+            'findingDepartments.actionPlans.closedBy:id,name,email,role',
             'findingDepartments.actionPlans.verifications',
             'findingDepartments.actionPlans.comments.creator',
             'findingDepartments.actionPlans.comments.attachments',
@@ -147,11 +155,26 @@ SHOW DETAIL
             'title' => $finding->title,
             'description' => $finding->description ?? '',
             'risk_rating' => $finding->risk_rating,
+            'risk_category' => $finding->risk_category,
+            'created_at' => $finding->created_at,
+            'creator' => $finding->creator ? [
+                'id' => $finding->creator->id,
+                'name' => $finding->creator->name,
+                'email' => $finding->creator->email,
+                'role' => $finding->creator->role,
+            ] : null,
 
             'project' => [
                 'id' => $finding->project->id,
                 'project_code' => $finding->project->project_code,
                 'project_name' => $finding->project->project_name,
+                'release_date' => $finding->project->release_date,
+                'creator' => $finding->project->creator ? [
+                    'id' => $finding->project->creator->id,
+                    'name' => $finding->project->creator->name,
+                    'email' => $finding->project->creator->email,
+                    'role' => $finding->project->creator->role,
+                ] : null,
 
                 'company' => [
                     'id' => $finding->project->company->id,
@@ -164,20 +187,46 @@ SHOW DETAIL
             'status' => $finding->status,
 
             'departments' => $finding->findingDepartments->map(function ($fd) {
+                $pics = $fd->department->users
+                    ->where('role', 'auditee')
+                    ->values()
+                    ->map(fn($u) => [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'email' => $u->email,
+                    ]);
+
                 return [
                     'finding_department_id' => $fd->id,
                     'department_id' => $fd->department->id,
                     'name' => $fd->department->name, // ✅ INI WAJIB
+                    'code' => $fd->department->code,
                     'status' => $fd->status,
+                    'pics' => $pics,
+                    'pic_name' => $pics->first()['name'] ?? ($fd->department->name . ' PIC'),
 
-                    'action_plans' => $fd->actionPlans->map(fn($ap) => [
-                        'id' => $ap->id,
-                        'root_cause' => $ap->root_cause ?? '',
-                        'corrective_action' => $ap->corrective_action ?? '',
-                        'status' => $ap->status,
-                        'queue' => $ap->queue,
-                        'primary_flag' => $ap->primary_flag,
-                        'due_date' => $ap->due_date,
+                    'action_plans' => $fd->actionPlans->map(function ($ap) use ($pics, $fd) {
+                        return [
+                            'id' => $ap->id,
+                            'root_cause' => $ap->root_cause ?? '',
+                            'corrective_action' => $ap->corrective_action ?? '',
+                            'status' => $ap->status,
+                            'queue' => $ap->queue,
+                            'primary_flag' => $ap->primary_flag,
+                            'due_date' => $ap->due_date,
+                            'submitted_at' => $ap->submitted_at,
+                            'closed_at' => $ap->closed_at,
+                            'submitted_by' => $ap->submittedBy ? [
+                                'id' => $ap->submittedBy->id,
+                                'name' => $ap->submittedBy->name,
+                                'role' => $ap->submittedBy->role,
+                            ] : null,
+                            'closed_by' => $ap->closedBy ? [
+                                'id' => $ap->closedBy->id,
+                                'name' => $ap->closedBy->name,
+                                'role' => $ap->closedBy->role,
+                            ] : null,
+                            'pic_name' => $ap->submittedBy?->name ?? ($pics->first()['name'] ?? ($fd->department->name . ' PIC')),
 
                         'flags' => array_values(
                                     array_unique(
@@ -223,13 +272,13 @@ SHOW DETAIL
                                 'file_name' => $a->file_name,
                                 'file_path' => $a->file_path,
                             ])
-                    ])
-                ])
-
-                ];
-            })
-        ]);
-    }
+                        ])
+                    ];
+                }),
+            ];
+        }),
+    ]);
+}
 
 
 /* =====================================================
