@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Services\AuditTrailService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProjectRequest;
 use App\Models\AuditProject;
 use App\Models\Company;
 use Carbon\Carbon;
@@ -113,15 +114,9 @@ class AuditProjectController extends Controller
     // ===============================
     // CREATE PROJECT
     // ===============================
-    public function store(Request $request)
+    public function store(StoreProjectRequest $request)
     {
-        // VALIDATION
-        $request->validate([
-            'company_id'   => 'required|exists:companies,id',
-            'project_name' => 'required|string|max:255',
-            'audit_type'   => 'nullable|string|max:255',
-            'release_date'   => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         // GET COMPANY
         $company = Company::findOrFail($request->company_id);
@@ -180,7 +175,7 @@ class AuditProjectController extends Controller
         return response()->json([
             'message' => 'Project created successfully',
             'data' => $project
-        ]);
+        ], 201);
     }
 
     // ===============================

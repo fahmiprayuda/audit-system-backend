@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use App\Services\AuditTrailService;
 use App\Services\StatusService;
 use App\Services\NotificationService;
+use App\Http\Requests\StoreActionPlanRequest;
+use App\Http\Requests\ActionPlanCommentRequest;
 use App\Models\User;
 use App\Models\ActionPlan;
 use App\Models\ActionPlanComment;
@@ -20,22 +22,14 @@ class ActionPlanController extends Controller
 
     /* ================= STORE ================= */
 
-    public function store(Request $request)
+    public function store(StoreActionPlanRequest $request)
     {
-        $validated = $request->validate([
-            'finding_department_id' => 'required|exists:finding_departments,id',
-            'root_cause' => 'nullable|string',
-            'corrective_action' => 'required|string',
-            'due_date' => 'nullable|date',
-        ]);
-
-        $validated['status'] =
-            'need_further_review';
+        $validated = $request->validated();
+        $validated['status'] = 'need_further_review';
 
         $ap = ActionPlan::create($validated);
 
         NotificationService::newActionPlan($ap);
-
         StatusService::sync($ap->finding_department_id);
 
         return response()->json([
@@ -72,64 +66,6 @@ class ActionPlanController extends Controller
 
     /* ================= ACTION ================= */
 
-    // public function submit(Request $request, $id)
-    // {
-    //     if (!$request->auditee_comment || trim($request->auditee_comment) === '') {
-    //         return response()->json([
-    //             'message' => 'Comment wajib diisi'
-    //         ], 400);
-    //     }
-
-    //     if ($ap->status === 'closed') {
-    //         return response()->json([
-    //             'message' => 'Action Plan already closed'
-    //         ], 400);
-    //     }
-
-    //     $ap = ActionPlan::findOrFail($id);
-    //     $ap->addFlag('submitted');
-    //     $ap->removeFlag('revision_required');
-
-    //     ActionPlanComment::create([
-    //         'action_plan_id' => $ap->id,
-    //         'role' => auth()->user()->role,
-    //         'message' => $request->auditee_comment,
-    //         'created_by' => auth()->id()
-    //     ]);
-
-    //     if ($request->hasFile('evidences')) {
-
-    //         foreach ($request->file('evidences') as $file) {
-
-    //             $path = $file->store(
-    //                 'evidences',
-    //                 'public'
-    //             );
-
-    //             $ap->evidences()->create([
-    //                 'file_path' => $path,
-    //                 'file_name' => $file->getClientOriginalName(),
-    //                 'uploaded_by' => auth()->id(),
-    //             ]);
-    //         }
-    //     }
-
-    //     StatusService::sync(
-    //         $ap->finding_department_id
-    //     );
-
-    //     AuditTrailService::log(
-    //         'action_plan',
-    //         'submit',
-    //         $ap->id,
-    //         'Action plan submitted'
-    //     );
-
-    //     return response()->json([
-    //         'message' => 'Submitted'
-    //     ]);
-    // }
-
     public function close($id)
     {
         $ap = ActionPlan::findOrFail($id);
@@ -161,25 +97,16 @@ class ActionPlanController extends Controller
         return response()->json(['message' => 'Closed']);
     }
 
-    public function comment(Request $request, $id)
+    public function comment(ActionPlanCommentRequest $request, $id)
     {
-        $request->validate([
-            'message' => 'required|string',
-
-            'workflow_action' =>
-                'nullable|in:submitted,revision_required',
-
-            'attachments.*' =>
-                'file|max:10240'
-        ]);
-
+        $validated = $request->validated();
         $ap = ActionPlan::findOrFail($id);
 
-         if ($ap->status === 'closed') {
-                return response()->json([
-                    'message' => 'Action Plan already closed'
-                ], 403);
-            }
+        if ($ap->status === 'closed') {
+            return response()->json([
+                'message' => 'Action Plan already closed'
+            ], 403);
+        }
 
           
             DB::beginTransaction();

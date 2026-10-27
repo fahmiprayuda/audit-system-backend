@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Services\AuditTrailService;
 use App\Services\StatusService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreFindingRequest;
 use Illuminate\Http\Request;
 use App\Models\Finding;
 use App\Models\FindingDepartment;
@@ -61,8 +62,13 @@ GET ALL FINDINGS
             });
         }
 
-        // FILTER RISK
-        if ($request->status) {
+        // FILTER RISK RATING
+        if ($request->filled('risk_rating')) {
+            $query->where('risk_rating', $request->risk_rating);
+        }
+
+        // FILTER STATUS
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
@@ -230,21 +236,9 @@ SHOW DETAIL
 CREATE
 ===================================================== */
 
-    public function store(Request $request)
+    public function store(StoreFindingRequest $request)
     {
-        $request->validate([
-            'audit_project_id' => 'required|exists:audit_projects,id',
-            'title' => 'required|string',
-            'description' => 'nullable|string',
-            'risk_rating' => 'nullable|string',
-
-            'departments' => 'nullable|array',
-            'departments.*' => 'exists:departments,id',
-
-            'action_plans' => 'nullable|array',
-            'action_plans.*.department_id' => 'required_with:action_plans|exists:departments,id',
-            'action_plans.*.corrective_action' => 'required_with:action_plans|string',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
 
@@ -355,7 +349,7 @@ CREATE
             return response()->json([
                 'message' => 'Finding + Action Plans created successfully',
                 'data' => $finding
-            ]);
+            ], 201);
 
         } catch (\Exception $e) {
 

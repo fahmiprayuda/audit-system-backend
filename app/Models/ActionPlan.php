@@ -8,6 +8,8 @@ class ActionPlan extends Model
 {
     protected $casts = [
         'due_date' => 'date',
+        'submitted_at' => 'datetime',
+        'closed_at' => 'datetime',
         'flags' => 'array',
     ];
 
@@ -18,6 +20,10 @@ class ActionPlan extends Model
         'due_date',
         'status',
         'flags',
+        'submitted_at',
+        'closed_at',
+        'submitted_by',
+        'closed_by',
     ];
 
     public function findingDepartment()
