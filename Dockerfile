@@ -62,6 +62,8 @@ RUN chmod -R 775 storage bootstrap/cache
 # Hanya discover package
 RUN php artisan package:discover --ansi
 
+RUN chmod +x docker/entrypoint.sh
+
 EXPOSE 8080
 
-CMD ["frankenphp","php-server","--root","public","--listen",":8080"]
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
