@@ -137,6 +137,8 @@ class AuditTrailController extends Controller
             $fTitle = null;
             $apTask = null;
 
+            $commentMsg = null;
+
             if ($mod === 'project' && isset($projects[$recId])) {
                 $p = $projects[$recId];
                 $pCode = $p->project_code;
@@ -159,6 +161,7 @@ class AuditTrailController extends Controller
                 $apTask = $ap->task;
             } elseif ($mod === 'comment' && isset($comments[$recId])) {
                 $c = $comments[$recId];
+                $commentMsg = $c->message;
                 $ap = $c->actionPlan;
                 $f = $ap?->findingDepartment?->finding;
                 $fCode = $f?->finding_code;
@@ -179,6 +182,22 @@ class AuditTrailController extends Controller
             if (!$apTask && is_array($item->new_values) && isset($item->new_values['action_plan'])) {
                 $apTask = $item->new_values['action_plan'];
             }
+            if (!$commentMsg && is_array($item->new_values)) {
+                $commentMsg = $item->new_values['comment'] ?? $item->new_values['message'] ?? null;
+            }
+
+            // Auto-enrich generic "Added comment" description if it was logged generically
+            if (strtolower(trim($item->description)) === 'added comment' && ($fCode || $commentMsg)) {
+                $desc = 'Added comment';
+                if ($fCode) {
+                    $desc .= " on Finding {$fCode}";
+                    if ($pCode) $desc .= " ({$pCode})";
+                }
+                if ($apTask) {
+                    $desc .= " - Action Plan: {$apTask}";
+                }
+                $item->description = $desc;
+            }
 
             $item->project_code = $pCode;
             $item->project_id = $pId;
@@ -186,6 +205,7 @@ class AuditTrailController extends Controller
             $item->finding_id = $fId;
             $item->finding_title = $fTitle;
             $item->action_plan_task = $apTask;
+            $item->comment_message = $commentMsg;
         }
 
         return $paginated;
