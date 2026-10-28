@@ -59,13 +59,16 @@ class NotificationService
 
     public static function newActionPlan(ActionPlan $ap)
     {
+        $finding = $ap->findingDepartment?->finding;
+        $findingTitle = $finding ? "\"{$finding->title}\"" : "temuan audit";
+
         foreach (self::auditees($ap) as $userId) {
 
             self::create(
                 $userId,
                 'action_plan_created',
-                'New Action Plan',
-                'A new Action Plan has been assigned to your department.',
+                'Action Plan Baru Ditugaskan',
+                "Action Plan baru telah ditugaskan ke departemen Anda untuk {$findingTitle}.",
                 $ap->detail_url
             );
         }
@@ -171,5 +174,29 @@ class NotificationService
         );
     }
 
+    public static function findingAssigned(\App\Models\Finding $finding, int $departmentId, ?User $auditor = null, int $actionPlansCount = 0)
+    {
+        $department = \App\Models\Department::find($departmentId);
+        $deptName = $department ? $department->name : 'Departemen';
+        $auditorName = $auditor ? $auditor->name : 'Auditor';
+        $projectName = $finding->project ? $finding->project->project_name : 'Audit Project';
 
+        $auditees = User::where('role', 'auditee')
+            ->where('department_id', $departmentId)
+            ->get();
+
+        foreach ($auditees as $auditee) {
+            $message = $actionPlansCount > 0
+                ? "Temuan baru \"{$finding->title}\" ({$finding->finding_code}) beserta {$actionPlansCount} Action Plan telah ditugaskan ke departemen {$deptName} oleh {$auditorName}."
+                : "Temuan baru \"{$finding->title}\" ({$finding->finding_code}) telah ditugaskan ke departemen {$deptName} oleh {$auditorName}.";
+
+            self::create(
+                $auditee->id,
+                'finding_created',
+                'Temuan Audit Baru Ditugaskan',
+                $message,
+                "/findings/{$finding->id}"
+            );
+        }
+    }
 }

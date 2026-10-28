@@ -102,7 +102,7 @@ class EnterpriseAuditSeeder extends Seeder
         ]);
 
         // 4. CLEAN UP UNWANTED OLD DUMMY PROJECTS & FINDINGS
-        AuditProject::whereIn('project_code', ['AUD-FFS-2026-002', 'AUD-FFS-2025-Q4'])->delete();
+        AuditProject::whereIn('project_code', ['AUD-FFS-2025-Q4'])->delete();
         Finding::whereIn('finding_code', ['FND-SCM-2026-003', 'FND-PROC-2025-004', 'FND-HR-2026-005', 'FND-FIN-2026-002'])->delete();
 
         // 5. SINGLE AUDIT PROJECT (HANYA 1 PROJECT)
@@ -181,6 +181,38 @@ class EnterpriseAuditSeeder extends Seeder
                 'url' => '/findings/' . $f1->id,
                 'read_at' => null,
             ]);
+        }
+
+        // 8. BACKFILL NOTIFICATIONS FOR AUDITEES OF ASSIGNED DEPARTMENTS
+        $allFindings = Finding::with(['findingDepartments.department', 'creator'])->get();
+        foreach ($allFindings as $af) {
+            foreach ($af->findingDepartments as $afd) {
+                if ($afd->department_id) {
+                    $auditees = User::where('role', 'auditee')
+                        ->where('department_id', $afd->department_id)
+                        ->get();
+
+                    foreach ($auditees as $auditee) {
+                        $url = "/findings/{$af->id}";
+                        if (!Notification::where('user_id', $auditee->id)->where('url', $url)->exists()) {
+                            $auditorName = $af->creator ? $af->creator->name : 'Auditor';
+                            $plansCount = $afd->actionPlans()->count();
+                            $message = $plansCount > 0
+                                ? "Temuan baru \"{$af->title}\" ({$af->finding_code}) beserta {$plansCount} Action Plan telah ditugaskan ke departemen {$afd->department->name} oleh {$auditorName}."
+                                : "Temuan baru \"{$af->title}\" ({$af->finding_code}) telah ditugaskan ke departemen {$afd->department->name} oleh {$auditorName}.";
+
+                            Notification::create([
+                                'user_id' => $auditee->id,
+                                'type' => 'finding_created',
+                                'title' => 'Temuan Audit Baru Ditugaskan',
+                                'message' => $message,
+                                'url' => $url,
+                                'read_at' => null,
+                            ]);
+                        }
+                    }
+                }
+            }
         }
     }
 

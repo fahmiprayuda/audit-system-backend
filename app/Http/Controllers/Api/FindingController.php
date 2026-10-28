@@ -48,10 +48,10 @@ GET ALL FINDINGS
             'project.creator:id,name,email,role',
             'project.company',
             'findingDepartments.department',
-            'findingDepartments.department.users:id,name,email,role,department_id',
+            'findingDepartments.department.users:id,name,email,role,level,department_id',
             'findingDepartments.actionPlans',
-            'findingDepartments.actionPlans.submittedBy:id,name,email,role',
-            'findingDepartments.actionPlans.closedBy:id,name,email,role'
+            'findingDepartments.actionPlans.submittedBy:id,name,email,role,level',
+            'findingDepartments.actionPlans.closedBy:id,name,email,role,level'
         ]);
 
         // SEARCH
@@ -140,9 +140,9 @@ SHOW DETAIL
             'creator:id,name,email,role',
             'project.creator:id,name,email,role',
             'project.company.departments',
-            'findingDepartments.department.users:id,name,email,role,department_id',
-            'findingDepartments.actionPlans.submittedBy:id,name,email,role',
-            'findingDepartments.actionPlans.closedBy:id,name,email,role',
+            'findingDepartments.department.users:id,name,email,role,level,department_id',
+            'findingDepartments.actionPlans.submittedBy:id,name,email,role,level',
+            'findingDepartments.actionPlans.closedBy:id,name,email,role,level',
             'findingDepartments.actionPlans.verifications',
             'findingDepartments.actionPlans.comments.creator',
             'findingDepartments.actionPlans.comments.attachments',
@@ -187,14 +187,31 @@ SHOW DETAIL
             'status' => $finding->status,
 
             'departments' => $finding->findingDepartments->map(function ($fd) {
+                $levelWeight = function ($level) {
+                    if (!$level) return 99;
+                    $lvl = strtolower($level);
+                    if (str_contains($lvl, 'head') || str_contains($lvl, 'lead') || str_contains($lvl, 'manager')) return 1;
+                    if (str_contains($lvl, 'supervisor') || str_contains($lvl, 'spv') || str_contains($lvl, 'senior')) return 2;
+                    if (str_contains($lvl, 'staff') || str_contains($lvl, 'officer') || str_contains($lvl, 'junior')) return 3;
+                    return 10;
+                };
+
                 $pics = $fd->department->users
                     ->where('role', 'auditee')
+                    ->sortBy(fn($u) => [$levelWeight($u->level), $u->name])
                     ->values()
                     ->map(fn($u) => [
                         'id' => $u->id,
                         'name' => $u->name,
                         'email' => $u->email,
+                        'level' => $u->level,
                     ]);
+
+                $picCount = $pics->count();
+                $deptName = $fd->department->name ?? 'Departemen';
+                $picSummary = $picCount === 0
+                    ? "{$deptName} PIC"
+                    : ($picCount === 1 ? $pics->first()['name'] : "Tim {$deptName} ({$picCount} PIC)");
 
                 return [
                     'finding_department_id' => $fd->id,
@@ -203,9 +220,9 @@ SHOW DETAIL
                     'code' => $fd->department->code,
                     'status' => $fd->status,
                     'pics' => $pics,
-                    'pic_name' => $pics->first()['name'] ?? ($fd->department->name . ' PIC'),
+                    'pic_name' => $picSummary,
 
-                    'action_plans' => $fd->actionPlans->map(function ($ap) use ($pics, $fd) {
+                    'action_plans' => $fd->actionPlans->map(function ($ap) use ($pics, $fd, $picSummary) {
                         return [
                             'id' => $ap->id,
                             'root_cause' => $ap->root_cause ?? '',
@@ -220,13 +237,15 @@ SHOW DETAIL
                                 'id' => $ap->submittedBy->id,
                                 'name' => $ap->submittedBy->name,
                                 'role' => $ap->submittedBy->role,
+                                'level' => $ap->submittedBy->level,
                             ] : null,
                             'closed_by' => $ap->closedBy ? [
                                 'id' => $ap->closedBy->id,
                                 'name' => $ap->closedBy->name,
                                 'role' => $ap->closedBy->role,
+                                'level' => $ap->closedBy->level,
                             ] : null,
-                            'pic_name' => $ap->submittedBy?->name ?? ($pics->first()['name'] ?? ($fd->department->name . ' PIC')),
+                            'pic_name' => $ap->submittedBy?->name ?? $picSummary,
 
                         'flags' => array_values(
                                     array_unique(
@@ -362,6 +381,7 @@ CREATE
                         'status' => 'need_further_review'
                     ]);
 
+                    $createdCount = 0;
                     if ($request->action_plans) {
                         $relatedPlans = collect($request->action_plans)
                             ->where('department_id', $deptId);
@@ -374,10 +394,21 @@ CREATE
                                 'due_date' => $ap['due_date'] ?? null,
                                 'status' => 'need_further_review'
                             ]);
+                            $createdCount++;
                         }
                     }
 
                     StatusService::sync($fd->id);
+
+                    // ===============================
+                    // Send Notifications to Auditees in Department
+                    // ===============================
+                    \App\Services\NotificationService::findingAssigned(
+                        $finding,
+                        $deptId,
+                        auth()->user(),
+                        $createdCount
+                    );
 
                     // $fd->refresh();
 

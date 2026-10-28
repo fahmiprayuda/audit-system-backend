@@ -89,6 +89,11 @@ class FindingAndActionPlanWorkflowTest extends TestCase
             'finding_code' => "FND-CORP-{$year}-001",
         ]);
 
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->auditee->id,
+            'type' => 'finding_created',
+        ]);
+
         $this->assertDatabaseHas('action_plans', [
             'corrective_action' => 'Setup Bastion Host and configure Cloudflare Zero Trust MFA',
             'status' => 'need_further_review',
