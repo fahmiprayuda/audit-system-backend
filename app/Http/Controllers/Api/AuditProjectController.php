@@ -177,13 +177,23 @@ class AuditProjectController extends Controller
             \App\Services\NotificationService::projectLeadAssigned($project, $project->creator, auth()->user());
         }
 
+        $cleanValues = [
+            'project_code' => $project->project_code,
+            'project_name' => $project->project_name,
+            'audit_type'   => $project->audit_type,
+            'release_date' => $project->release_date,
+            'company'      => $project->company?->name,
+            'lead_auditor' => $project->creator?->name,
+            'status'       => $project->status,
+        ];
+
         AuditTrailService::log(
             'Project',
             'Create',
             $project->id,
-            "Created project {$project->project_code}",
+            "Created project {$project->project_code} ({$project->project_name})",
             null,
-            $project->toArray()
+            $cleanValues
         );
 
         return response()->json([
@@ -237,9 +247,14 @@ class AuditProjectController extends Controller
             'Project',
             'Update',
             $project->id,
-            "Updated project {$project->project_code}",
-            $oldValues,
-            $project->fresh()->toArray()
+            "Updated project {$project->project_code} ({$project->project_name})",
+            collect($oldValues)->only(['project_name', 'audit_type', 'release_date'])->toArray(),
+            [
+                'project_name' => $project->project_name,
+                'audit_type'   => $project->audit_type,
+                'release_date' => $project->release_date,
+                'lead_auditor' => $project->creator?->name,
+            ]
         );
 
         return response()->json([

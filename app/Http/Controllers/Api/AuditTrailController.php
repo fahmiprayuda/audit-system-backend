@@ -28,14 +28,40 @@ class AuditTrailController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+
+            // Pre-fetch matching projects and findings for contextual search
+            $matchingProjIds = \App\Models\AuditProject::where('project_code', 'like', "%{$search}%")
+                ->orWhere('project_name', 'like', "%{$search}%")
+                ->pluck('id');
+
+            $matchingFindIds = \App\Models\Finding::where('finding_code', 'like', "%{$search}%")
+                ->orWhere('title', 'like', "%{$search}%")
+                ->pluck('id');
+
+            $query->where(function ($q) use ($search, $matchingProjIds, $matchingFindIds) {
                 $q->where('description', 'like', "%{$search}%")
                   ->orWhere('module', 'like', "%{$search}%")
                   ->orWhere('action', 'like', "%{$search}%")
+                  ->orWhere('new_values', 'like', "%{$search}%")
+                  ->orWhere('old_values', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
                   });
+
+                if ($matchingProjIds->isNotEmpty()) {
+                    $q->orWhere(function ($pq) use ($matchingProjIds) {
+                        $pq->whereRaw('LOWER(module) = ?', ['project'])
+                           ->whereIn('record_id', $matchingProjIds);
+                    });
+                }
+
+                if ($matchingFindIds->isNotEmpty()) {
+                    $q->orWhere(function ($fq) use ($matchingFindIds) {
+                        $fq->whereRaw('LOWER(module) = ?', ['finding'])
+                           ->whereIn('record_id', $matchingFindIds);
+                    });
+                }
             });
         }
 
@@ -57,8 +83,111 @@ class AuditTrailController extends Controller
 
         $perPage = min((int) ($request->per_page ?? 20), 100);
 
-        return $query
+        $paginated = $query
             ->latest()
             ->paginate($perPage);
+
+        // Batch resolve project_code, finding_code, and action plan task
+        $items = $paginated->getCollection();
+        $projectIds = [];
+        $findingIds = [];
+        $actionPlanIds = [];
+        $commentIds = [];
+
+        foreach ($items as $item) {
+            $mod = strtolower($item->module);
+            $recId = $item->record_id;
+            if (!$recId) continue;
+
+            if ($mod === 'project') {
+                $projectIds[] = $recId;
+            } elseif ($mod === 'finding') {
+                $findingIds[] = $recId;
+            } elseif ($mod === 'action_plan' || $mod === 'actionplan') {
+                $actionPlanIds[] = $recId;
+            } elseif ($mod === 'comment') {
+                $commentIds[] = $recId;
+            }
+        }
+
+        $projects = !empty($projectIds)
+            ? \App\Models\AuditProject::whereIn('id', array_unique($projectIds))->get()->keyBy('id')
+            : collect();
+
+        $findings = !empty($findingIds)
+            ? \App\Models\Finding::with('project')->whereIn('id', array_unique($findingIds))->get()->keyBy('id')
+            : collect();
+
+        $actionPlans = !empty($actionPlanIds)
+            ? \App\Models\ActionPlan::with('findingDepartment.finding.project')->whereIn('id', array_unique($actionPlanIds))->get()->keyBy('id')
+            : collect();
+
+        $comments = !empty($commentIds)
+            ? \App\Models\ActionPlanComment::with('actionPlan.findingDepartment.finding.project')->whereIn('id', array_unique($commentIds))->get()->keyBy('id')
+            : collect();
+
+        foreach ($items as $item) {
+            $mod = strtolower($item->module);
+            $recId = $item->record_id;
+
+            $pCode = null;
+            $pId = null;
+            $fCode = null;
+            $fId = null;
+            $fTitle = null;
+            $apTask = null;
+
+            if ($mod === 'project' && isset($projects[$recId])) {
+                $p = $projects[$recId];
+                $pCode = $p->project_code;
+                $pId = $p->id;
+            } elseif ($mod === 'finding' && isset($findings[$recId])) {
+                $f = $findings[$recId];
+                $fCode = $f->finding_code;
+                $fId = $f->id;
+                $fTitle = $f->title;
+                $pCode = $f->project?->project_code;
+                $pId = $f->project?->id;
+            } elseif (($mod === 'action_plan' || $mod === 'actionplan') && isset($actionPlans[$recId])) {
+                $ap = $actionPlans[$recId];
+                $f = $ap->findingDepartment?->finding;
+                $fCode = $f?->finding_code;
+                $fId = $f?->id;
+                $fTitle = $f?->title;
+                $pCode = $f?->project?->project_code;
+                $pId = $f?->project?->id;
+                $apTask = $ap->task;
+            } elseif ($mod === 'comment' && isset($comments[$recId])) {
+                $c = $comments[$recId];
+                $ap = $c->actionPlan;
+                $f = $ap?->findingDepartment?->finding;
+                $fCode = $f?->finding_code;
+                $fId = $f?->id;
+                $fTitle = $f?->title;
+                $pCode = $f?->project?->project_code;
+                $pId = $f?->project?->id;
+                $apTask = $ap?->task;
+            }
+
+            // Fallback checks from new_values if record was deleted or logged directly
+            if (!$pCode && is_array($item->new_values) && isset($item->new_values['project_code'])) {
+                $pCode = $item->new_values['project_code'];
+            }
+            if (!$fCode && is_array($item->new_values) && isset($item->new_values['finding_code'])) {
+                $fCode = $item->new_values['finding_code'];
+            }
+            if (!$apTask && is_array($item->new_values) && isset($item->new_values['action_plan'])) {
+                $apTask = $item->new_values['action_plan'];
+            }
+
+            $item->project_code = $pCode;
+            $item->project_id = $pId;
+            $item->finding_code = $fCode;
+            $item->finding_id = $fId;
+            $item->finding_title = $fTitle;
+            $item->action_plan_task = $apTask;
+        }
+
+        return $paginated;
     }
 }

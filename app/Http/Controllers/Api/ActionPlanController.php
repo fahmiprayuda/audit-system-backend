@@ -87,13 +87,23 @@ class ActionPlanController extends Controller
 
         StatusService::sync($ap->finding_department_id);
 
+        $ap->loadMissing('findingDepartment.finding.project');
+        $fCode = $ap->findingDepartment?->finding?->finding_code ?? '-';
+        $pCode = $ap->findingDepartment?->finding?->project?->project_code ?? '-';
+
         AuditTrailService::log(
             'action_plan',
             'close',
             $ap->id,
-            "Closed action plan: {$ap->task}",
+            "Closed action plan on Finding {$fCode} ({$pCode}): {$ap->task}",
             ['status' => 'open'],
-            ['status' => 'closed', 'closed_at' => now()->toIso8601String()]
+            [
+                'status' => 'closed',
+                'finding_code' => $fCode,
+                'project_code' => $pCode,
+                'action_plan' => $ap->task,
+                'closed_at' => now()->toIso8601String(),
+            ]
         );
 
         return response()->json(['message' => 'Closed']);
@@ -102,7 +112,11 @@ class ActionPlanController extends Controller
     public function comment(ActionPlanCommentRequest $request, $id)
     {
         $validated = $request->validated();
-        $ap = ActionPlan::findOrFail($id);
+        $ap = ActionPlan::with('findingDepartment.finding.project')->findOrFail($id);
+        $finding = $ap->findingDepartment?->finding;
+        $project = $finding?->project;
+        $fCode = $finding?->finding_code ?? '-';
+        $pCode = $project?->project_code ?? '-';
 
         if ($ap->status === 'closed') {
             return response()->json([
@@ -163,9 +177,14 @@ class ActionPlanController extends Controller
                     'action_plan',
                     'workflow_changed',
                     $ap->id,
-                    "Workflow changed to {$request->workflow_action} on action plan: {$ap->task}",
+                    "Workflow changed to {$request->workflow_action} on Finding {$fCode} ({$pCode}) - Action Plan: {$ap->task}",
                     ['workflow_status' => $ap->workflow_status],
-                    ['workflow_status' => $request->workflow_action]
+                    [
+                        'workflow_status' => $request->workflow_action,
+                        'finding_code' => $fCode,
+                        'project_code' => $pCode,
+                        'action_plan' => $ap->task,
+                    ]
                 );
             }
 
@@ -194,9 +213,14 @@ class ActionPlanController extends Controller
                 'comment',
                 'create',
                 $comment->id,
-                "Added comment on action plan: {$ap->task}",
+                "Added comment on Finding {$fCode} ({$pCode}) - Action Plan: {$ap->task}",
                 null,
-                ['message' => \Illuminate\Support\Str::limit($request->message, 120)]
+                [
+                    'comment' => $request->message,
+                    'finding_code' => $fCode,
+                    'project_code' => $pCode,
+                    'action_plan' => $ap->task,
+                ]
             );
 
             DB::commit();
@@ -296,13 +320,23 @@ class ActionPlanController extends Controller
             $ap->finding_department_id
         );
 
+        $ap->loadMissing('findingDepartment.finding.project');
+        $fCode = $ap->findingDepartment?->finding?->finding_code ?? '-';
+        $pCode = $ap->findingDepartment?->finding?->project?->project_code ?? '-';
+
         AuditTrailService::log(
             'action_plan',
             'extend',
             $ap->id,
-            "Extended due date from {$ap->getOriginal('due_date')} to {$request->new_due_date} on action plan: {$ap->task}",
+            "Extended due date from {$ap->getOriginal('due_date')} to {$request->new_due_date} on Finding {$fCode} ({$pCode}) - Action Plan: {$ap->task}",
             ['due_date' => $ap->getOriginal('due_date'), 'status' => $ap->getOriginal('status')],
-            ['due_date' => $request->new_due_date, 'status' => $request->status_after_extension]
+            [
+                'due_date' => $request->new_due_date,
+                'status' => $request->status_after_extension,
+                'finding_code' => $fCode,
+                'project_code' => $pCode,
+                'action_plan' => $ap->task,
+            ]
         );
 
         return response()->json([
