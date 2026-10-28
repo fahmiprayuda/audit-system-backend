@@ -91,7 +91,9 @@ class ActionPlanController extends Controller
             'action_plan',
             'close',
             $ap->id,
-            'Action plan closed'
+            "Closed action plan: {$ap->task}",
+            ['status' => 'open'],
+            ['status' => 'closed', 'closed_at' => now()->toIso8601String()]
         );
 
         return response()->json(['message' => 'Closed']);
@@ -161,7 +163,9 @@ class ActionPlanController extends Controller
                     'action_plan',
                     'workflow_changed',
                     $ap->id,
-                    "Workflow changed to {$request->workflow_action}"
+                    "Workflow changed to {$request->workflow_action} on action plan: {$ap->task}",
+                    ['workflow_status' => $ap->workflow_status],
+                    ['workflow_status' => $request->workflow_action]
                 );
             }
 
@@ -190,7 +194,9 @@ class ActionPlanController extends Controller
                 'comment',
                 'create',
                 $comment->id,
-                'Added comment'
+                "Added comment on action plan: {$ap->task}",
+                null,
+                ['message' => \Illuminate\Support\Str::limit($request->message, 120)]
             );
 
             DB::commit();
@@ -294,7 +300,9 @@ class ActionPlanController extends Controller
             'action_plan',
             'extend',
             $ap->id,
-            "Extended due date from {$ap->getOriginal('due_date')} to {$request->new_due_date}"
+            "Extended due date from {$ap->getOriginal('due_date')} to {$request->new_due_date} on action plan: {$ap->task}",
+            ['due_date' => $ap->getOriginal('due_date'), 'status' => $ap->getOriginal('status')],
+            ['due_date' => $request->new_due_date, 'status' => $request->status_after_extension]
         );
 
         return response()->json([

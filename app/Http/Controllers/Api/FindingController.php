@@ -417,11 +417,13 @@ CREATE
                     // Audit Trail
                     // ===============================
                     AuditTrailService::log(
-                            'finding',
-                            'create',
-                            $finding->id,
-                            'Created finding'
-                        );
+                        'finding',
+                        'create',
+                        $finding->id,
+                        "Created finding {$finding->finding_code} ({$finding->title})",
+                        null,
+                        $finding->only(['id', 'finding_code', 'title', 'risk_rating', 'risk_category'])
+                    );
                         
                 }
             }
@@ -458,6 +460,7 @@ UPDATE FINDING (GLOBAL DATA ONLY)
         ]);
 
         $finding = Finding::findOrFail($id);
+        $oldValues = $finding->only(['title', 'description', 'risk_rating', 'risk_category', 'department_id']);
 
         $riskRating = $request->risk_rating ?? $finding->risk_rating;
 
@@ -480,6 +483,15 @@ UPDATE FINDING (GLOBAL DATA ONLY)
         // refresh biar data terbaru kebaca
         $finding->refresh();
 
+        AuditTrailService::log(
+            'finding',
+            'update',
+            $finding->id,
+            "Updated finding {$finding->finding_code} ({$finding->title})",
+            $oldValues,
+            $finding->only(['title', 'description', 'risk_rating', 'risk_category', 'department_id'])
+        );
+
         return response()->json([
             'message' => 'Finding updated successfully',
             'data' => $finding,
@@ -499,7 +511,20 @@ DELETE
             ], 400);
         }
 
+        $oldValues = $finding->toArray();
+        $code = $finding->finding_code;
+        $title = $finding->title;
+
         $finding->delete();
+
+        AuditTrailService::log(
+            'finding',
+            'delete',
+            $id,
+            "Deleted finding {$code} ({$title})",
+            $oldValues,
+            null
+        );
 
         return response()->json([
             'message' => 'Finding deleted successfully.'

@@ -10,14 +10,16 @@ class AuditTrailController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AuditTrail::with('user');
+        $query = AuditTrail::with(['user.department']);
 
         if ($request->filled('module')) {
-            $query->where('module', $request->module);
+            $module = strtolower($request->module);
+            $query->whereRaw('LOWER(module) = ?', [$module]);
         }
 
         if ($request->filled('action')) {
-            $query->where('action', $request->action);
+            $action = strtolower($request->action);
+            $query->whereRaw('LOWER(action) = ?', [$action]);
         }
 
         if ($request->filled('user_id')) {
@@ -25,10 +27,15 @@ class AuditTrailController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('description', 'like', "%{$request->search}%")
-                  ->orWhere('module', 'like', "%{$request->search}%")
-                  ->orWhere('action', 'like', "%{$request->search}%");
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('module', 'like', "%{$search}%")
+                  ->orWhere('action', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -48,10 +55,10 @@ class AuditTrailController extends Controller
             );
         }
 
+        $perPage = min((int) ($request->per_page ?? 20), 100);
+
         return $query
             ->latest()
-            ->paginate(
-                $request->per_page ?? 20
-            );
+            ->paginate($perPage);
     }
 }
