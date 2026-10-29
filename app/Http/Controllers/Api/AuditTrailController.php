@@ -65,23 +65,45 @@ class AuditTrailController extends Controller
             });
         }
 
-        if ($request->filled('date_from')) {
-            $query->whereDate(
-                'created_at',
-                '>=',
-                $request->date_from
-            );
+        $allowAllPeriods = $request->boolean('all_periods') && $request->filled('search');
+
+        $from = null;
+        $to = null;
+
+        if (!$allowAllPeriods) {
+            if ($request->filled('date_from')) {
+                try {
+                    $from = \Carbon\Carbon::parse($request->date_from)->startOfDay();
+                } catch (\Exception $e) {
+                    $from = now()->startOfMonth();
+                }
+            } else {
+                $from = now()->startOfMonth();
+            }
+
+            if ($request->filled('date_to')) {
+                try {
+                    $to = \Carbon\Carbon::parse($request->date_to)->endOfDay();
+                } catch (\Exception $e) {
+                    $to = (clone $from)->endOfMonth();
+                }
+            } else {
+                $to = (clone $from)->endOfMonth();
+            }
+
+            // Enforce maximum 31 days limit
+            if ($from->diffInDays($to) > 31) {
+                $to = (clone $from)->addDays(31)->endOfDay();
+            }
+
+            if ($to->lt($from)) {
+                $to = (clone $from)->endOfDay();
+            }
+
+            $query->whereBetween('created_at', [$from, $to]);
         }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate(
-                'created_at',
-                '<=',
-                $request->date_to
-            );
-        }
-
-        $perPage = min((int) ($request->per_page ?? 20), 100);
+        $perPage = min((int) ($request->per_page ?? 20), 1000);
 
         $paginated = $query
             ->latest()
@@ -208,6 +230,12 @@ class AuditTrailController extends Controller
             $item->comment_message = $commentMsg;
         }
 
-        return $paginated;
+        return response()->json(array_merge($paginated->toArray(), [
+            'filter_period' => [
+                'from' => $allowAllPeriods ? null : $from->toDateString(),
+                'to'   => $allowAllPeriods ? null : $to->toDateString(),
+                'is_all_periods' => $allowAllPeriods,
+            ],
+        ]));
     }
 }
