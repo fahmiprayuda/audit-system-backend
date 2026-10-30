@@ -21,6 +21,7 @@ class AuditProjectController extends Controller
         $perPage = $request->get('per_page', 10);
 
         $projects = AuditProject::with(['company', 'creator:id,name,email,role'])
+            ->withCount('findings')
             ->latest()
             ->paginate($perPage);
 
